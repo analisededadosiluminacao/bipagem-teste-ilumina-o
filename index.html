@@ -1,0 +1,3482 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Bipagem · Teste Driver</title>
+<style>
+  :root{
+    --bg:#FFFFFF; --bg-panel:#FFFFFF; --bg-panel-raised:#F5F5F5;
+    --border:#E8E8E8; --border-strong:#9E9E9E;
+    --text-primary:#1A1A1A; --text-secondary:#444444; --text-faint:#9E9E9E;
+    --teal:#2DB547; --teal-dim:#E8F5EC;
+    --red:#D32F2F; --red-dim:#FADBD9;
+    --amber:#F57C00; --amber-dim:#FCE9D2;
+    --orange:#1A6B35; --orange-dim:#E8F5EC;
+    --verde-escuro:#1A6B35; --verde-hover:#259940;
+    --preto:#111111; --preto-hover:#1c1c1c;
+    --shadow-sm:0 1px 3px rgba(0,0,0,.10); --shadow-md:0 4px 12px rgba(0,0,0,.12);
+    --font-sans: 'Segoe UI', Arial, sans-serif;
+    --font-mono: 'Courier New', monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text-primary);
+    font-family:var(--font-sans); -webkit-tap-highlight-color:transparent;
+  }
+
+  #appShell{ display:flex; min-height:100vh; }
+
+  #sidebar{
+    width:250px; flex-shrink:0; background:var(--preto);
+    display:flex; flex-direction:column; position:sticky; top:0; height:100vh; overflow-y:auto;
+    transition:width .18s ease, padding .18s ease;
+  }
+  #appShell.sidebar-collapsed #sidebar{ width:0; overflow:hidden; }
+  .sidebar-brand{
+    display:flex; align-items:center; gap:10px; padding:20px 16px;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .sidebar-avatar{
+    width:38px; height:38px; border-radius:50%; flex-shrink:0;
+    background:linear-gradient(135deg,var(--verde-escuro),var(--teal));
+    display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:15px;
+  }
+  .sidebar-username{ color:#fff; font-weight:600; font-size:13px; line-height:1.3; white-space:nowrap; }
+  .sidebar-meta{ color:rgba(255,255,255,.55); font-size:11px; margin-top:1px; white-space:nowrap; }
+
+  .sidebar-nav{ flex:1; padding:14px 0; }
+  .sidebar-category{
+    display:flex; align-items:center; gap:12px; margin:0 14px 8px; padding:12px 14px;
+    background:#1c1c1c; border:1px solid rgba(255,255,255,.06); border-radius:14px; cursor:pointer;
+    white-space:nowrap;
+  }
+  .sidebar-category-icon{
+    width:34px; height:34px; border-radius:9px; flex-shrink:0;
+    background:linear-gradient(135deg,var(--verde-escuro),var(--teal));
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+  }
+  .sidebar-category-label{ flex:1; color:#fff; font-weight:700; font-size:14.5px; }
+  .sidebar-category-chevron{ color:rgba(255,255,255,.6); font-size:12px; transition:transform .18s; }
+  .sidebar-category.expanded .sidebar-category-chevron{ transform:rotate(180deg); }
+
+  .sidebar-subnav{ display:none; flex-direction:column; padding:2px 14px 6px; }
+  .sidebar-subnav.show{ display:flex; }
+  .sidebar-subnav .nav-tab{
+    padding:10px 12px 10px 44px; color:rgba(255,255,255,.72); font-size:13.5px; cursor:pointer;
+    border-radius:8px; white-space:nowrap;
+  }
+  .sidebar-subnav .nav-tab.active{
+    background:rgba(255,255,255,.08); color:#fff; font-weight:600;
+  }
+
+  .sidebar-footer{ padding:14px 16px; border-top:1px solid rgba(255,255,255,.08); white-space:nowrap; }
+
+  .app-col{ flex:1; min-width:0; display:flex; flex-direction:column; }
+
+  .hamburger-btn{
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2); color:#fff;
+    width:36px; height:36px; border-radius:8px; font-size:16px; line-height:1; cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; margin-right:12px;
+  }
+  .header-top-row{ display:flex; align-items:center; }
+
+  header{
+    padding:18px 24px; border-bottom:none;
+    position:sticky; top:0; z-index:10;
+    background:var(--preto);
+  }
+  .eyebrow{ font-family:var(--font-mono); font-size:11px; letter-spacing:.06em; color:rgba(255,255,255,.7); text-transform:uppercase; }
+  h1{ font-size:20px; margin:4px 0 2px; font-weight:700; color:#fff; }
+  .subtitle{ font-size:12.5px; color:rgba(255,255,255,.7); margin:0; }
+
+  main{ max-width:760px; margin:0 auto; padding:20px; width:100%; }
+
+  .opdb-box{ padding:16px 20px; }
+  .opdb-status{ margin-top:10px; }
+  .opdb-chip{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--bg-panel-raised); border:1px solid var(--border-strong); border-radius:8px;
+    padding:10px 12px; font-size:12.5px; color:var(--text-secondary);
+  }
+  .opdb-chip button{
+    background:var(--red-dim); color:var(--red); border:none; border-radius:999px;
+    width:20px; height:20px; font-size:12px; line-height:1; cursor:pointer; flex-shrink:0;
+  }
+  .confirm-produto{
+    background:var(--bg-panel-raised); border:1px solid var(--border); border-radius:8px;
+    padding:10px 12px; font-size:12.5px; color:var(--text-secondary); margin-bottom:14px; line-height:1.5;
+  }
+  .confirm-produto b{ color:var(--text-primary); }
+
+  .conserto-timer{
+    font-family:var(--font-mono); font-size:28px; font-weight:700; color:var(--verde-escuro);
+    text-align:center; padding:10px; background:var(--teal-dim); border-radius:8px; margin-bottom:14px;
+  }
+  .conserto-timer.paused{ color:var(--amber); background:var(--amber-dim); }
+
+  .scan-box{
+    background:var(--bg-panel); border:1px solid var(--border); border-radius:12px;
+    padding:20px; margin-bottom:16px; box-shadow:var(--shadow-sm);
+  }
+  .scan-box label{ font-size:12px; color:var(--text-secondary); display:block; margin-bottom:8px; }
+  .scan-input{
+    width:100%; font-family:var(--font-mono); font-size:20px; padding:14px 16px;
+    background:var(--bg-panel-raised); border:1px solid var(--border-strong); border-radius:8px;
+    color:var(--text-primary); outline:none;
+  }
+  .scan-input:focus{ border-color:var(--teal); }
+  .scan-hint{ font-size:11px; color:var(--text-faint); margin-top:8px; }
+
+  .confirm-panel{
+    background:var(--bg-panel); border:1px solid var(--border-strong); border-radius:12px;
+    padding:20px; margin-bottom:16px; display:none; box-shadow:var(--shadow-sm);
+  }
+  .confirm-panel.show{ display:block; }
+  .dup-warning{
+    background:var(--amber-dim); border:1px solid var(--amber); color:var(--amber);
+    border-radius:8px; padding:12px 14px; font-size:13px; margin-bottom:14px; line-height:1.5;
+  }
+  .dup-warning b{ font-weight:600; }
+  .confirm-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px; }
+  .confirm-op{ font-family:var(--font-mono); font-size:26px; font-weight:600; }
+  .confirm-serial{ font-family:var(--font-mono); font-size:12px; color:var(--text-faint); }
+  .btn-row{ display:flex; gap:10px; }
+  button{ font-family:var(--font-sans); cursor:pointer; border:none; border-radius:8px; }
+  .btn-ok{
+    flex:1; background:var(--teal-dim); color:var(--verde-escuro); border:1px solid var(--teal);
+    padding:14px; font-size:15px; font-weight:700;
+  }
+  .btn-defeito{
+    flex:1; background:var(--red-dim); color:#a1231f; border:1px solid var(--red);
+    padding:14px; font-size:15px; font-weight:700;
+  }
+  .btn-cancel{
+    background:transparent; color:var(--text-faint); border:1px solid var(--border);
+    padding:14px 18px; font-size:13px;
+  }
+
+  .defeito-form{ display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--border); }
+  .defeito-form.show{ display:block; }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:12px; color:var(--text-secondary); margin-bottom:6px; }
+  .field select, .field textarea, .field input[type=text]{
+    width:100%; font-family:var(--font-sans); font-size:14px; padding:10px 12px;
+    background:var(--bg-panel-raised); border:1px solid var(--border-strong); border-radius:8px;
+    color:var(--text-primary);
+  }
+  .field textarea{ min-height:60px; resize:vertical; font-family:var(--font-sans); }
+  .toggle-row{ display:flex; gap:8px; }
+  .toggle-btn{
+    flex:1; padding:10px; font-size:13px; border-radius:8px;
+    background:var(--bg-panel-raised); border:1px solid var(--border-strong); color:var(--text-secondary);
+  }
+  .toggle-btn.active-yes{ background:var(--teal-dim); border-color:var(--teal); color:var(--verde-escuro); }
+  .toggle-btn.active-no{ background:var(--red-dim); border-color:var(--red); color:#a1231f; }
+  .btn-save{
+    width:100%; background:var(--verde-escuro); color:#fff; padding:14px; font-size:15px; font-weight:600; border-radius:8px;
+  }
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--bg-panel-raised); border:1px solid var(--border-strong); color:var(--text-primary);
+    padding:12px 20px; border-radius:8px; font-size:13px; opacity:0; transition:all .25s; pointer-events:none; z-index:50;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .cards{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
+  .card{ background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; padding:14px; border-left:3px solid var(--card-accent, var(--border)); box-shadow:var(--shadow-sm); }
+  .card .num{ font-family:var(--font-mono); font-size:22px; font-weight:600; }
+  .card .lbl{ font-size:11px; color:var(--text-secondary); margin-top:2px; }
+
+  .filter-row{ display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+
+  .date-range-row{ display:flex; gap:10px; margin-bottom:12px; }
+  .date-field{ flex:1; }
+  .date-field label{ font-size:11px; color:var(--text-faint); display:block; margin-bottom:4px; }
+  .date-field input[type=date]{
+    width:100%; font-family:var(--font-mono); font-size:13px; padding:9px 10px;
+    background:var(--bg-panel-raised); border:1px solid var(--border-strong); border-radius:8px;
+    color:var(--text-primary); color-scheme: light;
+  }
+  .pill{
+    font-family:var(--font-mono); font-size:12px; padding:7px 14px; border-radius:999px;
+    background:var(--bg-panel); border:1px solid var(--border); color:var(--text-secondary); cursor:pointer;
+  }
+  .pill.active{ background:var(--teal-dim); border-color:var(--teal); color:var(--verde-escuro); font-weight:700; }
+
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  thead th{
+    text-align:left; font-family:var(--font-mono); font-size:10px; letter-spacing:.04em; text-transform:uppercase;
+    color:#fff; padding:9px 10px; background:var(--verde-escuro);
+  }
+  tbody td{ padding:9px 10px; border-bottom:1px solid var(--border); vertical-align:top; }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:nth-child(even){ background:var(--bg-panel-raised); }
+  .badge{ font-family:var(--font-mono); font-size:10.5px; padding:2px 8px; border-radius:999px; display:inline-block; }
+  .badge-ok{ background:var(--teal-dim); color:var(--verde-escuro); font-weight:700; }
+  .badge-defeito{ background:var(--red-dim); color:#a1231f; font-weight:700; }
+  .empty-state{ text-align:center; padding:40px 20px; color:var(--text-faint); font-size:13px; }
+
+  .footer-actions{ display:flex; gap:10px; margin-top:20px; }
+  .btn-secondary{
+    flex:1; background:var(--bg-panel); border:1px solid var(--border-strong); color:var(--text-secondary);
+    padding:12px; font-size:13px;
+  }
+  .btn-danger{
+    background:transparent; border:1px solid var(--red); color:var(--red); padding:12px 16px; font-size:13px;
+  }
+
+  .op-field{ margin-bottom:10px; }
+  .op-field label{ font-size:11px; color:var(--text-faint); }
+  .op-field input{
+    width:100%; font-family:var(--font-mono); font-size:13px; padding:8px 10px;
+    background:var(--bg-panel-raised); border:1px solid var(--border-strong); border-radius:6px; color:var(--text-primary);
+    margin-top:4px;
+  }
+
+  .login-card{
+    width:100%; max-width:380px; background:var(--bg-panel); border:1px solid var(--border);
+    border-radius:14px; padding:28px 24px; box-shadow:var(--shadow-md);
+  }
+  .login-brand{ text-align:center; margin-bottom:22px; }
+  .login-brand .wordmark{
+    font-size:26px; font-weight:800; letter-spacing:.02em; color:var(--text-primary);
+    font-family:var(--font-sans);
+  }
+  .login-brand .wordmark span{ color:var(--teal); }
+  .login-brand .tagline{ font-size:11px; color:var(--text-faint); letter-spacing:.08em; text-transform:uppercase; margin-top:2px; }
+  .login-card h2{ font-size:18px; margin:0 0 4px; font-weight:600; }
+  .login-card .login-sub{ font-size:12.5px; color:var(--text-secondary); margin:0 0 20px; }
+  .login-field{ margin-bottom:14px; }
+  .login-field label{ display:block; font-size:12px; color:var(--text-secondary); margin-bottom:6px; }
+  .login-field select, .login-field input{
+    width:100%; font-family:var(--font-sans); font-size:14px; padding:11px 12px;
+    background:var(--bg-panel-raised); border:1px solid var(--border-strong); border-radius:8px;
+    color:var(--text-primary);
+  }
+  .btn-login{
+    width:100%; background:var(--teal); color:#fff; font-weight:600; font-size:15px; padding:13px; border-radius:8px; margin-top:6px;
+  }
+  .login-toggle{
+    display:block; text-align:center; font-size:12.5px; color:var(--text-faint); margin-top:16px;
+    background:none; border:none; text-decoration:underline; cursor:pointer; width:100%;
+  }
+  .login-error{ font-size:12.5px; color:var(--red); margin-top:8px; display:none; }
+  .cabine-add-row{ display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  .cabine-add-row select{ flex-shrink:0; }
+  .cabine-add-row input{ flex:1; min-width:110px; }
+  .cabine-add-row button{
+    background:var(--bg-panel-raised); border:1px solid var(--border-strong); color:var(--text-secondary);
+    padding:0 14px; font-size:13px; border-radius:8px;
+  }
+
+  .btn-logout{
+    width:100%; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.25); color:#fff;
+    padding:10px 12px; font-size:12.5px; border-radius:6px;
+  }
+
+  .imported-chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .chip{
+    display:flex; align-items:center; gap:8px; font-family:var(--font-mono); font-size:11px;
+    background:var(--bg-panel-raised); border:1px solid var(--border-strong); border-radius:999px;
+    padding:6px 8px 6px 12px; color:var(--text-secondary);
+  }
+  .chip button{
+    background:var(--red-dim); color:var(--red); border:none; border-radius:999px;
+    width:18px; height:18px; font-size:11px; line-height:1; cursor:pointer;
+  }
+
+  .dash-hero{
+    background:var(--bg-panel); border:1px solid var(--border); border-radius:14px;
+    padding:28px; text-align:center; margin-bottom:16px; border-top:4px solid var(--card-accent, var(--border));
+    box-shadow:var(--shadow-sm);
+  }
+  .dash-hero .taxa-num{ font-family:var(--font-mono); font-size:56px; font-weight:700; line-height:1; }
+  .dash-hero .taxa-lbl{ font-size:14px; color:var(--text-secondary); margin-top:8px; }
+  .dash-hero .taxa-status{
+    display:inline-block; margin-top:12px; font-family:var(--font-mono); font-size:12px;
+    padding:5px 14px; border-radius:999px;
+  }
+
+  .dash-section{
+    background:var(--bg-panel); border:1px solid var(--border); border-radius:12px;
+    padding:18px; margin-bottom:16px; box-shadow:var(--shadow-sm);
+  }
+  .dash-section h3{ font-size:14px; font-weight:700; margin:0 0 14px; color:var(--orange); }
+
+  .trend-row{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .trend-day{ font-family:var(--font-mono); font-size:11px; color:var(--text-faint); width:44px; flex-shrink:0; }
+  .trend-bar-track{ flex:1; background:var(--bg-panel-raised); border-radius:4px; height:16px; position:relative; overflow:hidden; }
+  .trend-bar-fill{ height:100%; border-radius:4px; }
+  .trend-meta-line{ position:absolute; top:0; bottom:0; width:1px; background:var(--amber); }
+  .trend-val{ font-family:var(--font-mono); font-size:11px; width:48px; text-align:right; flex-shrink:0; }
+
+  /* ---- Donuts (relatório mensal) ---- */
+  .donut-row{ display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
+  .donut{ width:140px; height:140px; border-radius:50%; position:relative; flex-shrink:0; }
+  .donut-hole{
+    position:absolute; inset:24%; background:var(--bg-panel); border-radius:50%;
+    display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center;
+  }
+  .donut-hole .num{ font-family:var(--font-mono); font-weight:700; font-size:15px; }
+  .donut-legend{ display:flex; flex-direction:column; gap:5px; font-size:12px; }
+  .donut-legend .item{ display:flex; align-items:center; gap:6px; }
+  .donut-legend .sw{ width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+
+  /* ---- Gráfico de barras (Resumo Geral) ---- */
+  .barchart{ display:flex; align-items:flex-end; gap:10px; height:220px; padding:20px 4px 0; position:relative; overflow-x:auto; }
+  .barchart .meta-line{ position:absolute; left:4px; right:4px; border-top:2px dashed var(--red); }
+  .bar-col{ display:flex; flex-direction:column; align-items:center; gap:6px; min-width:44px; flex:1; height:100%; justify-content:flex-end; }
+  .bar-col .bar-val{ font-family:var(--font-mono); font-size:10.5px; font-weight:700; }
+  .bar-col .bar-fill{ width:26px; border-radius:4px 4px 0 0; min-height:2px; }
+  .bar-col .bar-label{ font-size:9.5px; color:var(--text-faint); text-align:center; line-height:1.15; }
+
+  .relatorio-familia{ margin-bottom:22px; padding-bottom:18px; border-bottom:1px solid var(--border); }
+  .relatorio-familia:last-child{ border-bottom:none; }
+  .relatorio-familia h4{ margin:0 0 10px; font-size:13px; color:var(--verde-escuro); }
+  .relatorio-meta-linha{ font-size:11.5px; color:var(--text-secondary); margin-top:8px; }
+
+  @media print{
+    #sidebar, header, .filter-row, .date-range-row, #certSubnavPills, .btn-secondary, .no-print{ display:none !important; }
+    body, main{ background:#fff !important; }
+    .app-col{ display:block !important; }
+    .relatorio-familia{ break-inside:avoid; }
+  }
+
+  /* Telas estreitas (celular): sidebar vira uma faixa horizontal no topo, rolável */
+  @media (max-width: 680px){
+    #sidebar{ width:100%; max-width:280px; height:100vh; position:fixed; left:0; top:0; z-index:50; box-shadow:2px 0 12px rgba(0,0,0,.3); }
+    #appShell:not(.sidebar-collapsed) #sidebar{ width:80vw; max-width:280px; }
+    #appShell.sidebar-collapsed #sidebar{ width:0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="appShell" style="display:none;">
+  <aside id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-avatar">Z</div>
+      <div class="sidebar-user">
+        <div class="sidebar-username" id="sidebarUserName"></div>
+        <div class="sidebar-meta" id="sidebarUserMeta"></div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-category expanded" id="sidebarCategoryToggle">
+        <div class="sidebar-category-icon">📊</div>
+        <div class="sidebar-category-label">Indicadores</div>
+        <div class="sidebar-category-chevron">⌄</div>
+      </div>
+      <div class="sidebar-subnav show" id="sidebarSubnav">
+        <div class="nav-tab active" data-view="bipagemView" data-unidade="Iluminação">Bipagem Iluminação</div>
+        <div class="nav-tab" data-view="bipagemView" data-unidade="Eletrônica">Bipagem Eletrônica</div>
+        <div class="nav-tab" data-view="consertoView" data-unidade="Iluminação">Conserto Iluminação</div>
+        <div class="nav-tab" data-view="consertoView" data-unidade="Eletrônica">Conserto Eletrônica</div>
+        <div class="nav-tab" data-view="dashboardView">Dashboard</div>
+        <div class="nav-tab" data-view="relatorioView">Relatório Mensal</div>
+        <div class="nav-tab" data-view="certificadosView">Certificados</div>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="app-col">
+    <header id="appHeader">
+      <div class="header-top-row">
+        <button class="hamburger-btn" id="btnToggleSidebar" aria-label="Abrir/fechar menu">☰</button>
+        <div>
+          <div class="eyebrow">Protótipo local · sem servidor</div>
+          <h1>Bipagem de Teste Driver</h1>
+        </div>
+      </div>
+      <p class="subtitle" id="headerSubtitle">Dados salvos apenas neste tablet · funciona sem internet</p>
+    </header>
+
+<main id="appMain">
+
+<div id="bipagemView">
+
+  <div class="scan-box">
+    <label>Bipe o código de barras da peça</label>
+    <input type="text" id="scanInput" class="scan-input" placeholder="Aguardando leitura..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <div class="scan-hint">O cursor volta automaticamente para este campo após cada registro.</div>
+  </div>
+
+  <div class="confirm-panel" id="confirmPanel">
+    <div class="confirm-produto" id="confirmProduto" style="display:none;"></div>
+    <div class="dup-warning" id="unidadeWarning" style="display:none;"></div>
+    <div class="dup-warning" id="dupWarning" style="display:none;"></div>
+    <div class="confirm-row">
+      <div>
+        <div class="confirm-op" id="confirmOp">OP ----</div>
+        <div class="confirm-serial" id="confirmSerial"></div>
+      </div>
+      <button class="btn-cancel" id="btnCancel">Cancelar</button>
+    </div>
+    <div class="btn-row" id="confirmBtnRow">
+      <button class="btn-ok" id="btnOk">✓ Peça OK</button>
+      <button class="btn-defeito" id="btnDefeitoToggle">⚠ Registrar defeito</button>
+    </div>
+
+    <div class="defeito-form" id="defeitoForm">
+      <div class="field">
+        <label>Tipo de defeito</label>
+        <select id="defeitoTipo">
+          <option value="">Selecione...</option>
+        </select>
+      </div>
+      <div class="field" id="defeitoOutrosField" style="display:none">
+        <label>Descreva o defeito</label>
+        <input type="text" id="defeitoOutrosInput" placeholder="Descrição do defeito">
+      </div>
+      <div class="field">
+        <label>O que fazer com esta peça?</label>
+        <div class="toggle-row">
+          <button class="toggle-btn" id="btnAcaoConsertar" type="button">Consertar agora</button>
+          <button class="toggle-btn" id="btnAcaoConserto" type="button">Enviar para conserto</button>
+        </div>
+      </div>
+      <div id="consertoImediatoFields" style="display:none;">
+        <div class="field">
+          <label>Causa raiz</label>
+          <textarea id="causaRaiz" placeholder="Ex: shunt com problema baixo"></textarea>
+        </div>
+        <div class="field">
+          <label>Foi consertado agora?</label>
+          <div class="toggle-row">
+            <button class="toggle-btn" id="btnConsertadoSim" type="button">Sim</button>
+            <button class="toggle-btn" id="btnConsertadoNao" type="button">Não</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn-save" id="btnSalvarDefeito">Salvar registro de defeito</button>
+    </div>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="filter-row">
+    <div class="pill active" data-filter="hoje">Hoje</div>
+    <div class="pill" data-filter="todos">Todos os dias</div>
+  </div>
+
+  <div style="background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+    <table>
+      <thead>
+        <tr><th>Hora</th><th>Linha</th><th>Unidade</th><th>OP</th><th>Serial</th><th>Status</th><th>Defeito</th><th>Consertado</th></tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none;">Nenhum registro ainda. Bipe uma peça para começar.</div>
+  </div>
+
+  <div class="footer-actions">
+    <button class="btn-secondary" id="btnExportCsv" style="flex:1;">⇩ Exportar CSV</button>
+  </div>
+
+  <div style="text-align:center; margin-top:18px;">
+    <a href="#" id="linkConfiguracoes" style="font-size:11px; color:var(--text-faint); text-decoration:underline;">⚙️ Configurações</a>
+  </div>
+
+</div>
+
+<div id="consertoView" style="display:none;">
+
+  <div class="scan-box">
+    <label>Bipar peça para iniciar avaliação de conserto</label>
+    <input type="text" id="consertoScanInput" class="scan-input" placeholder="Bipe o código de série..." autocomplete="off">
+    <div class="scan-hint">Busca automaticamente o defeito pendente daquele serial. Se não houver conserto pendente, avisa.</div>
+  </div>
+
+  <div class="scan-box" id="componenteExternoBox" style="display:none;">
+    <label>Componente recebido de outra unidade (ex: driver da Iluminação)</label>
+    <input type="text" id="componenteExternoScanInput" class="scan-input" placeholder="Bipe o serial do componente recebido..." autocomplete="off">
+    <div class="scan-hint">Use isto pra confirmar o recebimento e registrar o conserto de um componente que chegou fisicamente de outra unidade — não é um serial bipado por aqui antes.</div>
+  </div>
+
+  <div class="scan-box" id="confirmarRecebimentoBox" style="display:none;">
+    <label>Confirmar recebimento de driver consertado</label>
+    <input type="text" id="confirmarRecebimentoScanInput" class="scan-input" placeholder="Bipe o serial do driver que retornou..." autocomplete="off">
+    <div class="scan-hint">Bipe o driver quando ele voltar fisicamente da Eletrônica já consertado, pra confirmar o recebimento e liberar a peça pra remontagem/reteste.</div>
+  </div>
+
+  <div class="scan-box" id="consertoFormBox" style="display:none;">
+    <div class="confirm-produto" id="consertoInfo"></div>
+    <div class="conserto-timer" id="consertoTimer">⏱ 00:00</div>
+    <div class="btn-row" style="margin-bottom:14px;">
+      <button class="btn-secondary" id="btnConsertoPausar" type="button">⏸ Pausar</button>
+      <button class="btn-secondary" id="btnConsertoRetomar" type="button" style="display:none;">▶ Retomar</button>
+    </div>
+    <div class="field">
+      <label>Causa raiz <span style="color:var(--red);">*obrigatório</span></label>
+      <textarea id="consertoCausaRaiz" placeholder="Descreva o que causou o defeito e o que foi feito — obrigatório" required></textarea>
+    </div>
+    <div class="field" id="consertoComponenteSerialField">
+      <label id="consertoComponenteSerialLabel">Serial do componente de outro processo (ex: driver da Eletrônica)</label>
+      <input type="text" id="consertoComponenteSerial" placeholder="Bipe ou digite o serial, se aplicável">
+    </div>
+    <div class="field">
+      <label>Desfecho da peça</label>
+      <div class="toggle-row">
+        <button class="toggle-btn" id="btnConsertoSim" type="button">Consertado</button>
+        <button class="toggle-btn" id="btnConsertoNao" type="button">Descartado</button>
+        <button class="toggle-btn" id="btnConsertoEncaminhado" type="button">Encaminhar p/ Eletrônica</button>
+        <button class="toggle-btn" id="btnConsertoSubstituirDriver" type="button" style="display:none;">🦺 Substituir driver (Linha Ex)</button>
+      </div>
+    </div>
+    <div class="field" id="consertoDestinoField" style="display:none;">
+      <div class="scan-hint">Vai para o conserto da <b>Eletrônica</b>. O serial do driver acima é obrigatório pra liberar o encaminhamento.</div>
+    </div>
+    <div class="field" id="consertoDriverSubstitutoField" style="display:none;">
+      <div class="scan-hint" style="margin-bottom:10px;">Linha Ex não permite conserto de driver — o driver retirado (serial acima) é reclassificado como driver de Refletor, e um driver novo é instalado na peça.</div>
+      <label>Serial do driver novo instalado <span style="color:var(--red);">*obrigatório</span></label>
+      <input type="text" id="consertoDriverSubstituto" placeholder="Bipe o serial do driver novo">
+    </div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="btn-cancel" id="btnConsertoCancelar">Cancelar</button>
+      <button class="btn-save" id="btnConsertoSalvar" style="flex:1;">Salvar conserto</button>
+    </div>
+  </div>
+
+  <div class="scan-box">
+    <label>Fila de peças aguardando conserto</label>
+    <table>
+      <thead>
+        <tr><th>Hora</th><th>Linha</th><th>Unidade</th><th>OP</th><th>Serial</th><th>Defeito</th></tr>
+      </thead>
+      <tbody id="consertoFilaBody"></tbody>
+    </table>
+    <div class="empty-state" id="consertoFilaEmpty" style="display:none;">Nenhuma peça aguardando conserto.</div>
+  </div>
+
+  <div class="scan-box" id="consertoEncaminhadosBox" style="display:none;">
+    <label>Encaminhadas para outra área (aguardando lá)</label>
+    <table>
+      <thead>
+        <tr><th>Hora</th><th>Serial</th><th>Defeito</th><th>Encaminhado para</th><th>Requisição</th><th></th></tr>
+      </thead>
+      <tbody id="consertoEncaminhadosBody"></tbody>
+    </table>
+  </div>
+
+  <div class="scan-box" id="aguardandoResteBox" style="display:none;">
+    <label>Aguardando reteste após conserto</label>
+    <div class="scan-hint" style="margin-bottom:12px;">Peças já consertadas — falta bipar de novo pra confirmar que funcionaram e fechar o registro (sem isso, não contam pra liberação do certificado).</div>
+    <table>
+      <thead>
+        <tr><th>Serial</th><th>OP</th><th>Linha</th><th>Defeito original</th><th>Consertado em</th></tr>
+      </thead>
+      <tbody id="aguardandoResteBody"></tbody>
+    </table>
+  </div>
+
+  <div class="scan-box" id="requisicaoFormBox" style="display:none;">
+    <label>Requisitar novo driver do estoque</label>
+    <div class="confirm-produto" id="requisicaoInfo"></div>
+    <div class="field">
+      <label>Motivo</label>
+      <div class="toggle-row">
+        <button class="toggle-btn" id="btnRequisicaoDescarte" type="button">Descarte</button>
+        <button class="toggle-btn" id="btnRequisicaoUrgencia" type="button">Urgência (driver original volta pro estoque depois)</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Serial do driver novo <span style="color:var(--red);">*obrigatório</span></label>
+      <input type="text" id="requisicaoDriverSerial" placeholder="Bipe o serial do driver novo">
+    </div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="btn-cancel" id="btnRequisicaoCancelar">Cancelar</button>
+      <button class="btn-save" id="btnRequisicaoSalvar" style="flex:1;">Salvar requisição</button>
+    </div>
+  </div>
+
+  <div class="scan-box" id="reincidenciaBox" style="display:none;">
+    <div class="dup-warning" id="reincidenciaAviso" style="display:block;"></div>
+    <button class="btn-secondary" id="btnAbrirAcaoQualidade" style="width:100%;">Abrir ação com Qualidade/Engenharia</button>
+    <button class="btn-cancel" id="btnDispensarReincidencia" style="width:100%; margin-top:8px;">Dispensar</button>
+  </div>
+
+  <div class="scan-box" id="acoesQualidadeBox" style="display:none;">
+    <label>Ações de Qualidade/Engenharia</label>
+    <table>
+      <thead>
+        <tr><th>Data</th><th>Componente</th><th>Reincidências</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody id="acoesQualidadeBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<div id="dashboardView" style="display:none;">
+
+  <div class="filter-row" id="dashUnidadePills"></div>
+  <div class="filter-row" id="dashLinhaPills"></div>
+  <div class="filter-row">
+    <div class="pill" id="dashAtalhoHoje">📅 Hoje</div>
+    <div class="pill" id="dashAtalhoMes">🗓 Mês atual</div>
+  </div>
+  <div class="date-range-row">
+    <div class="date-field">
+      <label>De:</label>
+      <input type="date" id="dashDateFrom">
+    </div>
+    <div class="date-field">
+      <label>Até:</label>
+      <input type="date" id="dashDateTo">
+    </div>
+  </div>
+
+  <div class="dash-hero" id="dashHero"></div>
+
+  <div class="cards" id="dashCards"></div>
+
+  <div class="dash-section" id="dashTrendSection" style="display:none;">
+    <h3>Tendência de taxa de defeito no mês</h3>
+    <div id="dashTrend"></div>
+  </div>
+
+  <div class="dash-section">
+    <h3>Por unidade</h3>
+    <table>
+      <thead><tr><th>Unidade</th><th>Produzido</th><th>Defeitos</th><th>Taxa</th></tr></thead>
+      <tbody id="dashUnidadeBody"></tbody>
+    </table>
+  </div>
+
+  <div class="dash-section">
+    <h3>Por linha</h3>
+    <table>
+      <thead><tr><th>Linha</th><th>Unidade</th><th>Produzido</th><th>Defeitos</th><th>Taxa</th></tr></thead>
+      <tbody id="dashLinhaBody"></tbody>
+    </table>
+  </div>
+
+  <div class="dash-section">
+    <h3>Por tipo de produto</h3>
+    <table>
+      <thead><tr><th>Produto</th><th>Produzido</th><th>Defeitos</th><th>Taxa</th></tr></thead>
+      <tbody id="dashProdutoBody"></tbody>
+    </table>
+  </div>
+
+  <div class="dash-section">
+    <h3>Principais causas de defeito</h3>
+    <table>
+      <thead><tr><th>Tipo de defeito</th><th>Ocorrências</th><th>% dos defeitos</th></tr></thead>
+      <tbody id="dashCausasBody"></tbody>
+    </table>
+  </div>
+
+  <div class="dash-section" id="dashConsertoSection" style="display:none;">
+    <h3>Conserto — tempo dedicado e eficácia</h3>
+    <div class="cards" id="dashConsertoCards"></div>
+  </div>
+
+  <div class="dash-section" id="dashCulpadoSection" style="display:none;">
+    <h3>Componentes apontados como causa em outro processo</h3>
+    <div class="scan-hint" style="margin-bottom:12px;">Peças desta unidade que foram identificadas, no conserto de outro processo, como causa raiz de um defeito — ex: um driver da Eletrônica que falhou dentro de uma luminária da Iluminação.</div>
+    <table>
+      <thead><tr><th>Serial do componente</th><th>Unidade de origem</th><th>Identificado em</th><th>Causa registrada</th><th>Data</th></tr></thead>
+      <tbody id="dashCulpadoBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<div id="certificadosView" style="display:none;">
+
+  <div class="filter-row" id="certSubnavPills"></div>
+
+  <div id="certPageDashboard">
+    <div class="cards" id="certDashCards"></div>
+    <div class="dash-section">
+      <h3>Regra de liberação</h3>
+      <div class="scan-hint">Certificado de Aprovação é exclusivo da <b>Iluminação</b> (produto final montado pra venda) — dados da Eletrônica não entram nessa conta. Uma OP libera o certificado quando: 100% da quantidade bipada bate com a quantidade da OP, e todo defeito registrado está com o conserto concluído (sem itens pendentes ou encaminhados).</div>
+    </div>
+    <div class="dash-section">
+      <h3>Emissão desativada por enquanto</h3>
+      <div class="scan-hint">A decodificação por máscara da descrição foi descartada (variabilidade alta demais). O plano futuro é: assim que a OP é finalizada, buscar automaticamente a ficha técnica dela (consumo de componentes) pelo número da OP, e preencher os campos do certificado com esses dados reais — a mesma pesquisa por ordem que já existe hoje. Essa integração ainda não está pronta.</div>
+    </div>
+  </div>
+
+  <div id="certPageEmitir" style="display:none;">
+    <div class="dash-section" id="certJustificarSection" style="display:none;">
+      <h3>⏱ OPs paradas há 3+ dias úteis — precisam de justificativa</h3>
+      <div class="scan-hint" style="margin-bottom:12px;">Sem nenhuma bipagem nova há 3 dias úteis desde o último lançamento. Justifique a falta pra poder encerrar a OP mesmo sem 100% testado.</div>
+      <table>
+        <thead><tr><th>OP</th><th>Linha</th><th>Faltam</th><th>Sequenciais faltando</th><th>Última bipagem</th><th>Dias úteis parada</th><th></th></tr></thead>
+        <tbody id="certJustificarBody"></tbody>
+      </table>
+    </div>
+
+    <div class="scan-box" id="justificarFormBox" style="display:none;">
+      <label>Justificar OP <span id="justificarOpLabel"></span></label>
+      <div class="field">
+        <label>Motivo <span style="color:var(--red);">*obrigatório</span></label>
+        <textarea id="justificarMotivo" placeholder="Descreva por que essa OP não será 100% testada (ex: peças remanescentes indisponíveis, OP cancelada parcialmente, etc.)"></textarea>
+      </div>
+      <div class="scan-hint" style="margin-bottom:12px;">Ao justificar, essa OP fica marcada como encerrada com pendência justificada. O termo de liberação (assinatura do líder) é um processo que já existe na empresa — a emissão automática dele aqui ainda depende do modelo do documento.</div>
+      <div class="btn-row">
+        <button class="btn-cancel" id="btnJustificarCancelar">Cancelar</button>
+        <button class="btn-save" id="btnJustificarSalvar" style="flex:1;">Salvar justificativa</button>
+      </div>
+    </div>
+
+    <div class="dash-section">
+      <h3>OPs — status de liberação do certificado</h3>
+      <div class="filter-row" id="certStatusPills"></div>
+      <table>
+        <thead><tr><th>OP</th><th>Linha</th><th>Unidade</th><th>Produto</th><th>Bipado / OP</th><th>Defeitos pendentes</th><th>Status</th><th>Motivo</th><th></th></tr></thead>
+        <tbody id="certEmitirBody"></tbody>
+      </table>
+      <div class="empty-state" id="certEmitirEmpty" style="display:none;">Nenhuma OP com bipagem registrada ainda.</div>
+    </div>
+  </div>
+
+  <div id="certPageLinhaEx" style="display:none;">
+    <div class="dash-section">
+      <h3>🦺 Linha Ex (ZL 56xx)</h3>
+      <div class="scan-hint">Essas OPs exigem revisão manual antes da emissão (N3-513).</div>
+    </div>
+  </div>
+
+  <div id="certPageWord" style="display:none;">
+    <div class="dash-section">
+      <h3>Arquivos Word</h3>
+      <div class="empty-state">Função desativada por enquanto. O plano é que, assim que a OP for finalizada, o preenchimento venha da pesquisa da ficha técnica (consumo de componentes) pelo número da OP — não mais por decodificação da descrição.</div>
+    </div>
+  </div>
+
+  <div id="certPagePdf" style="display:none;">
+    <div class="dash-section">
+      <h3>Arquivos PDF</h3>
+      <div class="empty-state">Função desativada por enquanto. Mesmo plano da geração em Word: preenchimento automático via ficha técnica da OP, quando essa integração existir.</div>
+    </div>
+  </div>
+
+</div>
+
+<div id="configuracoesView" style="display:none;">
+  <div class="scan-box opdb-box">
+    <label>Base de OPs (opcional) · relatório MPOP207 do Zagonel</label>
+    <input type="file" id="importOpInput" accept=".xlsx,.xls,.csv" style="display:none;">
+    <button class="btn-secondary" id="btnImportOp" style="width:100%;">⇧ Importar planilha de OPs (.xlsx ou .csv)</button>
+    <div class="scan-hint">Ao importar, cada bipagem mostra automaticamente o produto e a quantidade da OP correspondente. Essa base é compartilhada entre a Bipagem, o Conserto e os Certificados — não precisa importar em mais de um lugar.</div>
+    <div id="opdbStatus" class="opdb-status"></div>
+  </div>
+
+  <div class="scan-box">
+    <label>Importar CSVs exportados de outras linhas/tablets</label>
+    <input type="file" id="importCsvInput" accept=".csv" multiple style="display:none;">
+    <button class="btn-secondary" id="btnImportCsv" style="width:100%;">⇧ Selecionar arquivos CSV</button>
+    <div class="scan-hint">Os dados desse próprio tablet já entram automaticamente. Importe os CSVs exportados dos outros tablets para consolidar.</div>
+    <div id="importedChips" class="imported-chips"></div>
+  </div>
+
+  <div class="scan-box">
+    <label>Dados locais deste tablet</label>
+    <div class="scan-hint" style="margin-bottom:12px;">Apaga todos os registros de bipagem salvos neste tablet. Não afeta CSVs já exportados nem a base de OPs.</div>
+    <button class="btn-danger" id="btnClear" style="width:100%;">Limpar dados locais</button>
+  </div>
+</div>
+
+<div id="relatorioView" style="display:none;">
+  <div class="scan-box">
+    <label>Relatório Mensal — Índice de Qualidade Iluminação</label>
+    <div class="scan-hint" style="margin-bottom:12px;">Gera o relatório completo (produzido x defeito por linha, detalhamento por tipo de defeito, e resumo geral) pra exportar/enviar por e-mail. Só considera dados da Iluminação.</div>
+    <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+      <div class="login-field" style="flex:1; min-width:140px; margin-bottom:0;">
+        <label>Mês</label>
+        <select id="relatorioMes"></select>
+      </div>
+      <div class="login-field" style="flex:1; min-width:100px; margin-bottom:0;">
+        <label>Ano</label>
+        <input type="number" id="relatorioAno" min="2020" max="2100">
+      </div>
+      <button class="btn-login" id="btnGerarRelatorio" style="flex:1; min-width:160px;">Gerar relatório</button>
+      <button class="btn-secondary no-print" id="btnImprimirRelatorio" style="flex:1; min-width:160px; display:none;">🖨 Imprimir / Exportar PDF</button>
+    </div>
+    <div class="field" style="margin-top:14px;">
+      <label>Linhas a incluir <span style="font-weight:400; color:var(--text-faint);">(escolha uma, várias ou todas — pra não deixar o relatório extenso demais)</span></label>
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <button class="btn-secondary" id="btnRelatorioLinhasTodas" type="button" style="font-size:11px; padding:6px 10px;">Selecionar todas</button>
+        <button class="btn-secondary" id="btnRelatorioLinhasNenhuma" type="button" style="font-size:11px; padding:6px 10px;">Limpar seleção</button>
+      </div>
+      <div id="relatorioLinhasChecks" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
+    </div>
+  </div>
+
+  <div id="relatorioConteudo"></div>
+</div>
+
+</main>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== CONFIG ===================== */
+const META_TAXA_DEFEITO = 1.5; // % — abaixo da meta é bom, acima é ruim
+const DB_NAME = 'bipagem_teste_driver';
+const DB_VERSION = 2;
+const STORE = 'registros';
+const IMPORT_STORE = 'importados';
+
+/* ===================== LEITOR DE PLANILHA (XLSX/CSV, sem bibliotecas externas) =====================
+   Faz o suficiente para ler relatórios exportados do Zagonel: descompacta o .xlsx (ZIP)
+   usando a API nativa do navegador (DecompressionStream) e lê as células da primeira planilha.
+   Não depende de internet nem de bibliotecas de terceiros. */
+const XlsxLite = (function(){
+  async function inflateRaw(bytes){
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+
+  async function unzip(arrayBuffer){
+    const data = new Uint8Array(arrayBuffer);
+    const dv = new DataView(arrayBuffer);
+    const EOCD_SIG = 0x06054b50;
+    let eocdOffset = -1;
+    const start = Math.max(0, data.length - 66000);
+    for(let i = data.length - 22; i >= start; i--){
+      if(dv.getUint32(i, true) === EOCD_SIG){ eocdOffset = i; break; }
+    }
+    if(eocdOffset === -1) throw new Error('Arquivo .xlsx inválido (fim de diretório ZIP não encontrado)');
+    const cdOffset = dv.getUint32(eocdOffset+16, true);
+    const cdEntries = dv.getUint16(eocdOffset+10, true);
+    const entries = {};
+    let offset = cdOffset;
+    for(let n=0; n<cdEntries; n++){
+      if(dv.getUint32(offset, true) !== 0x02014b50) break;
+      const compMethod = dv.getUint16(offset+10, true);
+      const compSize = dv.getUint32(offset+20, true);
+      const nameLen = dv.getUint16(offset+28, true);
+      const extraLen = dv.getUint16(offset+30, true);
+      const commentLen = dv.getUint16(offset+32, true);
+      const localOffset = dv.getUint32(offset+42, true);
+      const name = new TextDecoder('utf-8').decode(data.slice(offset+46, offset+46+nameLen)).replace(/\\/g,'/');
+      entries[name] = { compMethod, compSize, localOffset };
+      offset += 46 + nameLen + extraLen + commentLen;
+    }
+    return {
+      entries,
+      async read(name){
+        const key = Object.keys(entries).find(k=>k.toLowerCase()===name.toLowerCase());
+        if(!key) return null;
+        const e = entries[key];
+        const lNameLen = dv.getUint16(e.localOffset+26, true);
+        const lExtraLen = dv.getUint16(e.localOffset+28, true);
+        const dataStart = e.localOffset + 30 + lNameLen + lExtraLen;
+        const compBytes = data.slice(dataStart, dataStart + e.compSize);
+        if(e.compMethod === 0) return compBytes;
+        if(e.compMethod === 8) return await inflateRaw(compBytes);
+        throw new Error('Compressão não suportada dentro do .xlsx (método '+e.compMethod+')');
+      }
+    };
+  }
+
+  function decodeXmlText(s){
+    return s.replace(/<!\[CDATA\[/,'').replace(/\]\]>/,'')
+      .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,'&');
+  }
+  function colLettersToIndex(letters){
+    let idx = 0;
+    for(let i=0;i<letters.length;i++) idx = idx*26 + (letters.charCodeAt(i) - 64);
+    return idx - 1;
+  }
+
+  async function parseSheetRows(zip, sheetPath, sharedStrings){
+    const bytes = await zip.read(sheetPath);
+    const xml = new TextDecoder('utf-8').decode(bytes);
+    const rows = [];
+    const rowRe = /<row\b[^>]*>([\s\S]*?)<\/row>/g;
+    let rowMatch;
+    while((rowMatch = rowRe.exec(xml))){
+      const rowXml = rowMatch[1];
+      const cellRe = /<c\b([^>]*?)\/>|<c\b([^>]*?)>([\s\S]*?)<\/c>/g;
+      const cellsByCol = {};
+      let maxCol = 0, autoCol = 0, cm;
+      while((cm = cellRe.exec(rowXml))){
+        const attrs = cm[1] !== undefined ? cm[1] : cm[2];
+        const inner = cm[3] || '';
+        const refM = /r="([A-Z]+)\d+"/.exec(attrs);
+        const typeM = /t="([^"]+)"/.exec(attrs);
+        const colIdx = refM ? colLettersToIndex(refM[1]) : autoCol;
+        autoCol = colIdx + 1;
+        maxCol = Math.max(maxCol, colIdx+1);
+        const type = typeM ? typeM[1] : null;
+        let value = null;
+        if(type === 'inlineStr'){
+          const tM = /<t[^>]*>([\s\S]*?)<\/t>/.exec(inner);
+          value = tM ? decodeXmlText(tM[1]) : '';
+        } else if(type === 's'){
+          const vM = /<v>([\s\S]*?)<\/v>/.exec(inner);
+          const idx = vM ? parseInt(vM[1],10) : -1;
+          value = sharedStrings[idx] !== undefined ? sharedStrings[idx] : '';
+        } else {
+          const vM = /<v>([\s\S]*?)<\/v>/.exec(inner);
+          if(vM){ const num = Number(vM[1]); value = isNaN(num) ? vM[1] : num; }
+        }
+        cellsByCol[colIdx] = value;
+      }
+      const arr = [];
+      for(let i=0;i<maxCol;i++) arr.push(cellsByCol[i] !== undefined ? cellsByCol[i] : null);
+      rows.push(arr);
+    }
+    return rows;
+  }
+
+  async function parseXlsxAllSheets(arrayBuffer){
+    if(typeof DecompressionStream === 'undefined'){
+      throw new Error('Este navegador não suporta leitura de .xlsx. Atualize o Chrome/Edge, ou exporte a planilha como CSV.');
+    }
+    const zip = await unzip(arrayBuffer);
+
+    let sharedStrings = [];
+    const ssBytes = await zip.read('xl/sharedStrings.xml');
+    if(ssBytes){
+      const ssXml = new TextDecoder('utf-8').decode(ssBytes);
+      const siRe = /<si\b[^>]*>([\s\S]*?)<\/si>/g;
+      let m;
+      while((m = siRe.exec(ssXml))){
+        const texts = Array.from(m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)).map(t=>decodeXmlText(t[1]));
+        sharedStrings.push(texts.join(''));
+      }
+    }
+
+    const wbBytes = await zip.read('xl/workbook.xml');
+    const relsBytes = await zip.read('xl/_rels/workbook.xml.rels');
+    const sheetDefs = []; // {name, path}
+    if(wbBytes && relsBytes){
+      const wbXml = new TextDecoder('utf-8').decode(wbBytes);
+      const relsXml = new TextDecoder('utf-8').decode(relsBytes);
+      const relTargets = {};
+      const relRe = /<Relationship[^>]*Id="([^"]+)"[^>]*Target="([^"]+)"/g;
+      let rm;
+      while((rm = relRe.exec(relsXml))) relTargets[rm[1]] = rm[2];
+      const sheetRe = /<sheet\b[^>]*name="([^"]+)"[^>]*r:id="([^"]+)"[^>]*\/>|<sheet\b[^>]*r:id="([^"]+)"[^>]*name="([^"]+)"[^>]*\/>/g;
+      let sm;
+      while((sm = sheetRe.exec(wbXml))){
+        const name = decodeXmlText(sm[1] !== undefined ? sm[1] : sm[4]);
+        const rid = sm[2] !== undefined ? sm[2] : sm[3];
+        const target = relTargets[rid];
+        if(target) sheetDefs.push({ name, path: 'xl/' + target.replace(/^\.?\/?/,'') });
+      }
+    }
+    if(sheetDefs.length === 0){
+      const candidates = Object.keys(zip.entries).filter(k=>/xl\/.*sheet.*\.xml$/i.test(k) && !/sharedstrings/i.test(k)).sort();
+      candidates.forEach((path,i)=>sheetDefs.push({ name: 'Sheet'+(i+1), path }));
+    }
+    if(sheetDefs.length === 0) throw new Error('Não encontrei nenhuma planilha dentro do arquivo .xlsx');
+
+    const result = {};
+    for(const def of sheetDefs){
+      if(!zip.entries[def.path]) continue;
+      result[def.name] = await parseSheetRows(zip, def.path, sharedStrings);
+    }
+    return result;
+  }
+
+  async function parseXlsx(arrayBuffer){
+    const all = await parseXlsxAllSheets(arrayBuffer);
+    const firstName = Object.keys(all)[0];
+    return all[firstName] || [];
+  }
+
+  return { parseXlsx, parseXlsxAllSheets };
+})();
+
+
+/* ===================== HELPERS DE SERIAL =====================
+   Dois formatos reconhecidos, ambos identificados pela origem (90 = Iluminação, 70 = Eletrônica):
+
+   Formato A — 15 dígitos numéricos:
+   - 2 primeiros dígitos: origem
+   - 9 dígitos seguintes: OP com zeros à esquerda (OP real tem 4 ou 5 dígitos)
+   - 4 últimos dígitos: sequencial único (tipo RG, não se repete)
+   Ex.: 900000160290015 -> origem 90, OP 16029, sequencial 0015
+        700000069130110 -> origem 70, OP 6913,  sequencial 0110
+
+   Formato B — 16 caracteres, com letras do produto (usado em seriais da Eletrônica):
+   - 1º dígito: empresa (não usado na leitura)
+   - 2 letras seguintes: código do produto
+   - 2 dígitos seguintes: origem
+   - 1 dígito seguinte: descartado (não usado na leitura)
+   - 4 dígitos seguintes: OP
+   - 6 últimos dígitos: sequencial único
+   Ex.: 4PR7006848000016 -> origem 70, produto PR, OP 6848, sequencial 000016
+*/
+function onlyDigits(v){ return String(v==null?'':v).replace(/\D/g,''); }
+
+const ORIGEM_UNIDADE = { '90':'Iluminação', '70':'Eletrônica' };
+
+const UNIDADES = ['Iluminação', 'Eletrônica'];
+
+/* Linha Ex (ZL 56xx) — produtos à prova de explosão. Conserto é proibido por norma:
+   qualquer problema de driver exige substituição por um novo, nunca reparo no local. */
+const LINHA_EX_PATTERN = /^ZL\s*56/i;
+function isLinhaEx(linha){ return LINHA_EX_PATTERN.test(linha || ''); }
+
+function parseSerial(raw){
+  const trimmed = String(raw==null?'':raw).trim();
+
+  // Formato B: 1 dígito empresa + 2 letras produto + 2 dígitos origem + 1 dígito descartado + 4 dígitos OP + 6 dígitos sequencial
+  const mB = /^(\d)([A-Za-z]{2})(\d{2})(\d)(\d{4})(\d{6})$/.exec(trimmed);
+  if(mB){
+    const origemCod = mB[3];
+    const unidade = ORIGEM_UNIDADE[origemCod] || null;
+    if(unidade){
+      const op = String(parseInt(mB[5], 10));
+      const sequencial = mB[6];
+      return { serial: trimmed.toUpperCase(), origemCod, unidade, op, sequencial, produto: mB[2].toUpperCase() };
+    }
+  }
+
+  // Formato A: 15 dígitos numéricos
+  const s = onlyDigits(trimmed);
+  if(s.length === 15){
+    const origemCod = s.substr(0,2);
+    const unidade = ORIGEM_UNIDADE[origemCod] || null;
+    if(unidade){
+      const op = String(parseInt(s.substr(2,9), 10));
+      const sequencial = s.substr(11,4);
+      return { serial:s, origemCod, unidade, op, sequencial };
+    }
+  }
+
+  return null;
+}
+
+/* ===================== INDEXEDDB ===================== */
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e)=>{
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains(STORE)){
+        const store = db.createObjectStore(STORE, {keyPath:'id'});
+        store.createIndex('timestamp','timestamp');
+      }
+      if(!db.objectStoreNames.contains(IMPORT_STORE)){
+        const importStore = db.createObjectStore(IMPORT_STORE, {keyPath:'id'});
+        importStore.createIndex('sourceFile','sourceFile');
+      }
+    };
+    req.onsuccess = ()=>resolve(req.result);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+let dbPromise = openDB();
+
+async function addRecord(rec){
+  const db = await dbPromise;
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).add(rec);
+    tx.oncomplete = ()=>resolve();
+    tx.onerror = ()=>reject(tx.error);
+  });
+}
+async function updateRecord(id, patch){
+  const db = await dbPromise;
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(STORE,'readwrite');
+    const store = tx.objectStore(STORE);
+    const getReq = store.get(id);
+    getReq.onsuccess = ()=>{
+      const rec = getReq.result;
+      if(!rec){ reject(new Error('Registro não encontrado')); return; }
+      Object.assign(rec, patch);
+      store.put(rec);
+    };
+    getReq.onerror = ()=>reject(getReq.error);
+    tx.oncomplete = ()=>resolve();
+    tx.onerror = ()=>reject(tx.error);
+  });
+}
+async function getAllRecords(){
+  const db = await dbPromise;
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(STORE,'readonly');
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = ()=>resolve(req.result);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+async function clearAllRecords(){
+  const db = await dbPromise;
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).clear();
+    tx.oncomplete = ()=>resolve();
+    tx.onerror = ()=>reject(tx.error);
+  });
+}
+
+async function addImportedRecords(records){
+  const db = await dbPromise;
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(IMPORT_STORE,'readwrite');
+    const store = tx.objectStore(IMPORT_STORE);
+    records.forEach(r=>store.put(r));
+    tx.oncomplete = ()=>resolve();
+    tx.onerror = ()=>reject(tx.error);
+  });
+}
+async function getAllImportedRecords(){
+  const db = await dbPromise;
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(IMPORT_STORE,'readonly');
+    const req = tx.objectStore(IMPORT_STORE).getAll();
+    req.onsuccess = ()=>resolve(req.result);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+async function removeImportedBySource(sourceFile){
+  const db = await dbPromise;
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(IMPORT_STORE,'readwrite');
+    const idx = tx.objectStore(IMPORT_STORE).index('sourceFile');
+    const req = idx.openCursor(IDBKeyRange.only(sourceFile));
+    req.onsuccess = (e)=>{
+      const cursor = e.target.result;
+      if(cursor){ cursor.delete(); cursor.continue(); }
+    };
+    tx.oncomplete = ()=>resolve();
+    tx.onerror = ()=>reject(tx.error);
+  });
+}
+
+/* ===================== ESTADO ===================== */
+/* ===================== BASE DE OPs (produto, quantidade, status — importada do relatório) =====================
+   Mapeamento de colunas do relatório MPOP207 do Zagonel (sem cabeçalho, posição fixa):
+   A=grupo  B=OP  C=código produto  D=unidade  E=descrição  F=qtd. planejada  G=qtd. confirmada
+   H=data fim planejada  I=data fim real  J=data abertura  K=status  L=responsável  M=código extra */
+const OPDB_KEY = 'bipagem_opdb';
+const OPDB_META_KEY = 'bipagem_opdb_meta';
+
+function getOpDb(){
+  const stored = localStorage.getItem(OPDB_KEY);
+  return stored ? JSON.parse(stored) : {};
+}
+function saveOpDb(db, meta){
+  localStorage.setItem(OPDB_KEY, JSON.stringify(db));
+  localStorage.setItem(OPDB_META_KEY, JSON.stringify(meta));
+}
+function clearOpDb(){
+  localStorage.removeItem(OPDB_KEY);
+  localStorage.removeItem(OPDB_META_KEY);
+}
+function getOpDbMeta(){
+  const stored = localStorage.getItem(OPDB_META_KEY);
+  return stored ? JSON.parse(stored) : null;
+}
+
+/* Extrai a linha (ex: "ZL 28") a partir do número que segue "ZL" na descrição do produto —
+   usa os 2 primeiros dígitos do número, conforme convenção da fábrica (ex: "ZL 2892" -> "ZL 28"). */
+function extractLinhaFromDescricao(desc){
+  if(!desc) return null;
+  const m = /ZL\s*0*([1-9]\d{2,3})/i.exec(desc);
+  if(!m) return null;
+  return 'ZL ' + m[1].slice(0,2);
+}
+
+/* Extrai a família do produto (ex: "LAMPADA TUBULAR T8") a partir do texto antes da potência
+   (número seguido de "W") na descrição — mesma convenção usada para o restante da descrição. */
+function extractFamiliaFromDescricao(desc){
+  if(!desc) return null;
+  const m = /^(.*?)\s+\d+\s*W\b/i.exec(desc);
+  if(!m) return null;
+  const fam = m[1].replace(/^[\*\s]+/,'').replace(/\(N[ÃA]O VENDER\)/i,'').replace(/\s+/g,' ').trim();
+  return fam || null;
+}
+
+function buildOpDbFromRows(rows){
+  const db = {};
+  let count = 0;
+  rows.forEach(r=>{
+    if(!r || r.length < 7) return;
+    const opRaw = r[1];
+    if(opRaw === null || opRaw === undefined || opRaw === '') return;
+    const opNum = Number(opRaw);
+    if(isNaN(opNum)) return;
+    const op = String(Math.trunc(opNum));
+    const descricao = r[4] != null ? String(r[4]) : null;
+    db[op] = {
+      g: r[0] != null ? String(r[0]) : null,
+      c: r[2] != null ? String(r[2]) : null,
+      u: r[3] != null ? String(r[3]) : null,
+      d: descricao,
+      qp: r[5] != null ? Number(r[5]) : null,
+      qc: r[6] != null ? Number(r[6]) : null,
+      s: r[10] != null ? String(r[10]) : null,
+      l: extractLinhaFromDescricao(descricao),
+      f: extractFamiliaFromDescricao(descricao),
+    };
+    count++;
+  });
+  return { db, count };
+}
+
+function renderOpDbStatus(){
+  const meta = getOpDbMeta();
+  const el = document.getElementById('opdbStatus');
+  if(!meta){ el.innerHTML = ''; return; }
+  const quando = new Date(meta.importedAt).toLocaleString('pt-BR');
+  el.innerHTML = `<div class="opdb-chip">
+    <span><b style="color:var(--text-primary)">${meta.count.toLocaleString('pt-BR')}</b> OPs importadas de "${escapeHtml(meta.fileName)}" · ${quando}</span>
+    <button type="button" id="btnRemoveOpDb" title="Remover base">✕</button>
+  </div>`;
+  document.getElementById('btnRemoveOpDb').addEventListener('click', ()=>{
+    if(!confirm('Remover a base de OPs importada?')) return;
+    clearOpDb();
+    renderOpDbStatus();
+    showToast('Base de OPs removida');
+  });
+}
+
+document.getElementById('btnImportOp').addEventListener('click', ()=>{
+  document.getElementById('importOpInput').click();
+});
+
+/* Depois de importar/atualizar a base de OPs, corrige registros já bipados que ficaram sem
+   linha/produto na hora (porque a OP deles ainda não estava na base naquele momento). */
+async function backfillLinhaFromOpDb(opDb){
+  const all = await getAllRecords();
+  const pendentes = all.filter(r=>!r.linha && r.op && opDb[r.op]);
+  for(const r of pendentes){
+    const info = opDb[r.op];
+    await updateRecord(r.id, {
+      linha: info.l || null,
+      produtoCodigo: info.c || null,
+      produtoDescricao: info.d || null,
+      produtoFamilia: info.f || null,
+      opQuantidade: info.qp != null ? info.qp : null,
+      opStatus: info.s || null,
+    });
+  }
+  return pendentes.length;
+}
+
+document.getElementById('importOpInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  try{
+    let rows;
+    if(/\.csv$/i.test(file.name)){
+      const text = await file.text();
+      const clean = text.replace(/^\uFEFF/, '').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+      const delim = (clean.split('\n')[0].split(';').length >= clean.split('\n')[0].split(',').length) ? ';' : ',';
+      rows = clean.split('\n').filter(l=>l.trim()!=='').map(l=>parseCsvLineDelim(l, delim));
+    } else {
+      const buf = await file.arrayBuffer();
+      rows = await XlsxLite.parseXlsx(buf);
+    }
+    const { db, count } = buildOpDbFromRows(rows);
+    if(count === 0){ showToast('Nenhuma OP reconhecida nesse arquivo'); return; }
+    saveOpDb(db, { count, fileName: file.name, importedAt: new Date().toISOString() });
+    renderOpDbStatus();
+    const corrigidos = await backfillLinhaFromOpDb(db);
+    refresh();
+    showToast(count.toLocaleString('pt-BR')+' OPs importadas'+(corrigidos ? ' · '+corrigidos.toLocaleString('pt-BR')+' registros já bipados foram atualizados com a linha/produto' : ''));
+  } catch(err){
+    console.error(err);
+    showToast('Erro ao importar: ' + err.message);
+  }
+});
+
+
+let pending = null; // {serial, op, unidade, sequencial, opInfo}
+let reclassifyTargetId = null; // id do registro OK sendo reclassificado como defeito (fluxo "marcar depois")
+let consertadoValue = null; // true/false/null
+let acaoDefeitoValue = null; // 'consertar' | 'conserto' | null
+let activeFilter = 'hoje';
+let currentUser = null;
+let currentLinha = null;
+let currentUnidadeLinha = null;
+
+/* ===================== INÍCIO DIRETO (sem login — autenticação fica a cargo do app real) ===================== */
+function startSession(){
+  currentUser = 'Operador'; // identificação de operador fica a cargo do app real, quando integrado
+  currentLinha = null; // linha não é mais escolhida no login — vem da base de OPs por bipagem, quando disponível
+  currentUnidadeLinha = 'Iluminação'; // tela padrão ao abrir é "Bipagem Iluminação" (aba ativa por padrão)
+  document.getElementById('sidebarUserName').textContent = currentUser;
+  document.getElementById('sidebarUserMeta').textContent = currentUnidadeLinha;
+  document.getElementById('headerSubtitle').textContent = `${currentUnidadeLinha} · dados salvos apenas neste tablet · funciona sem internet`;
+  document.getElementById('appShell').style.display = 'flex';
+  if(window.innerWidth <= 680) document.getElementById('appShell').classList.add('sidebar-collapsed');
+  renderOpDbStatus();
+  refresh();
+  focusScan();
+}
+
+/* ===================== TOAST ===================== */
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ===================== FLUXO DE BIPAGEM ===================== */
+const scanInput = document.getElementById('scanInput');
+const confirmPanel = document.getElementById('confirmPanel');
+const defeitoForm = document.getElementById('defeitoForm');
+
+function focusScan(){ setTimeout(()=>scanInput.focus(), 50); }
+
+/* Log de duplicidades desta sessão — acumula (nunca substitui), fica visível pra revisão
+   posterior mesmo depois de bipar outras peças normalmente. */
+/* Beep de alerta (gerado na hora, sem arquivo de áudio) — toca quando o fluxo automático
+   precisa parar pra confirmação manual (duplicidade ou unidade divergente). */
+function playAlertSound(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    for(let i=0;i<8;i++){
+      const delay = i*0.11;
+      const freq = i%2===0 ? 1100 : 800;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.4, ctx.currentTime + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + 0.12);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.14);
+    }
+  } catch(e){ /* navegador sem suporte a áudio — segue sem som */ }
+}
+
+/* Bipe curto de confirmação (peça OK auto-confirmada) — marimba de 3 notas, rápido,
+   pra não atrapalhar o ritmo de bipagem sequencial. */
+function playOkSound(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const notas = [ [784,0], [988,0.08], [1175,0.16] ];
+    notas.forEach(([freq, delay])=>{
+      const dur = freq===1175 ? 0.15 : 0.1;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + delay + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + dur);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + dur + 0.02);
+    });
+  } catch(e){ /* navegador sem suporte a áudio — segue sem som */ }
+}
+
+async function saveOkFromPending(p){
+  await addRecord({
+    id: crypto.randomUUID(),
+    timestamp: new Date().toISOString(),
+    serial: p.serial,
+    op: p.op,
+    sequencial: p.sequencial,
+    unidade: p.unidade,
+    linha: (p.opInfo && p.opInfo.l) ? p.opInfo.l : currentLinha,
+    produtoCodigo: p.opInfo ? p.opInfo.c : null,
+    produtoDescricao: p.opInfo ? p.opInfo.d : null,
+    produtoFamilia: p.opInfo ? p.opInfo.f : null,
+    opQuantidade: p.opInfo ? p.opInfo.qp : null,
+    opStatus: p.opInfo ? p.opInfo.s : null,
+    operador: currentUser,
+    tipo: 'OK',
+    defeito: null,
+    causa: null,
+    consertado: null,
+  });
+}
+
+scanInput.addEventListener('keydown', async (e)=>{
+  if(e.key !== 'Enter') return;
+  const raw = scanInput.value.trim();
+  scanInput.value = '';
+  if(!raw) return;
+  const parsed = parseSerial(raw);
+  if(!parsed){
+    showToast('Código inválido — bipe novamente');
+    return;
+  }
+  pending = parsed;
+  reclassifyTargetId = null; // toda bipagem nova começa "limpa" — só vira reclassificação se for duplicidade (abaixo)
+
+  const opDb = getOpDb();
+  const info = opDb[parsed.op];
+  if(info) pending.opInfo = info;
+  else pending.opInfo = null;
+
+  const unidadeDivergente = !!(currentUnidadeLinha && parsed.unidade !== currentUnidadeLinha);
+  const all = await getAllRecords();
+  const anteriores = all.filter(r=>r.serial===parsed.serial).sort((a,b)=>b.timestamp.localeCompare(a.timestamp));
+  const duplicado = anteriores.length>0;
+
+  /* Caminho feliz: sem duplicidade e sem divergência de unidade — salva OK direto,
+     sem exigir toque na tela, pra não travar a bipagem sequencial. */
+  if(!unidadeDivergente && !duplicado){
+    await saveOkFromPending(pending);
+    playOkSound();
+    showToast('✓ OK · '+parsed.serial);
+    pending = null;
+    focusScan();
+    refresh();
+    return;
+  }
+
+  /* Duplicidade: se o operador optar por registrar defeito, o padrão é ATUALIZAR o registro
+     mais recente daquele serial (sem criar linha duplicada) — só "OK" continua permitindo
+     confirmar de novo sem travar o processo. */
+  if(duplicado) reclassifyTargetId = anteriores[0].id;
+
+  /* Caso de atenção: para o fluxo automático, toca alerta sonoro e exige confirmação manual. */
+  playAlertSound();
+  document.getElementById('confirmOp').textContent = 'OP ' + parsed.op + ' · ' + parsed.unidade;
+  document.getElementById('confirmSerial').textContent = parsed.serial + ' · seq. ' + parsed.sequencial;
+  document.getElementById('confirmBtnRow').style.display = 'flex';
+  confirmPanel.classList.add('show');
+  defeitoForm.classList.remove('show');
+  resetDefeitoForm();
+
+  const confirmProduto = document.getElementById('confirmProduto');
+  if(info){
+    const qtd = info.qp != null ? info.qp.toLocaleString('pt-BR') : '?';
+    confirmProduto.innerHTML = `<b>${escapeHtml(info.d || info.c || 'Produto sem descrição')}</b><br>Cód. ${escapeHtml(info.c||'–')} · Qtd. da OP: ${qtd}${info.s ? ' · Status: '+escapeHtml(info.s) : ''}${info.l ? ' · Linha: '+escapeHtml(info.l) : ''}${info.f ? ' · Família: '+escapeHtml(info.f) : ''}`;
+    confirmProduto.style.display = 'block';
+  } else if(getOpDbMeta()){
+    confirmProduto.innerHTML = 'OP '+parsed.op+' não encontrada na base de OPs importada.';
+    confirmProduto.style.display = 'block';
+  } else {
+    confirmProduto.style.display = 'none';
+  }
+
+  const unidadeWarning = document.getElementById('unidadeWarning');
+  if(unidadeDivergente){
+    unidadeWarning.innerHTML = '⚠ <b>Unidade divergente</b> — este serial é de <b>'+parsed.unidade+'</b>, mas a unidade selecionada no login é <b>'+currentUnidadeLinha+'</b>. Confira se não bipou a peça errada.';
+    unidadeWarning.style.display = 'block';
+  } else {
+    unidadeWarning.style.display = 'none';
+  }
+
+  const dupWarning = document.getElementById('dupWarning');
+  const btnOkEl = document.getElementById('btnOk');
+  if(duplicado){
+    const ultimo = anteriores[0];
+    const quando = new Date(ultimo.timestamp).toLocaleString('pt-BR');
+    const passouPeloConserto = ultimo.tipo==='DEFEITO' && ultimo.statusConserto==='concluido';
+    if(passouPeloConserto){
+      btnOkEl.style.display = 'inline-block';
+      dupWarning.innerHTML = '⚠ <b>Este serial já foi bipado antes</b> — última vez em '+quando+', status: DEFEITO ('+(ultimo.defeito||'')+') · já consertada, aguardando reteste'+(anteriores.length>1 ? ' · '+anteriores.length+' bipagens anteriores' : '')+'. Se está testando depois do conserto, confirme com "Peça OK" (reteste). Se apresentar defeito de novo, use "Registrar defeito" — o registro original é atualizado, sem duplicar.';
+    } else {
+      const statusTxt = ultimo.tipo==='OK' ? 'OK' : 'DEFEITO ('+(ultimo.defeito||'')+')'+(ultimo.statusConserto ? ' · '+(ultimo.statusConserto==='pendente' ? 'aguardando conserto' : 'encaminhada pra outra unidade') : '');
+      btnOkEl.style.display = 'none';
+      dupWarning.innerHTML = '⚠ <b>Este serial já foi bipado antes</b> — última vez em '+quando+', status: '+statusTxt+'. Bipagem repetida só é válida como reteste depois de passar pelo conserto. Use "Registrar defeito" abaixo — o registro original é atualizado, sem duplicar.';
+    }
+    dupWarning.style.display = 'block';
+  } else {
+    btnOkEl.style.display = 'inline-block';
+    dupWarning.style.display = 'none';
+  }
+});
+
+document.getElementById('btnCancel').addEventListener('click', ()=>{
+  pending = null;
+  reclassifyTargetId = null;
+  confirmPanel.classList.remove('show');
+  defeitoForm.classList.remove('show');
+  document.getElementById('confirmBtnRow').style.display = 'flex';
+  document.getElementById('dupWarning').style.display = 'none';
+  document.getElementById('unidadeWarning').style.display = 'none';
+  document.getElementById('confirmProduto').style.display = 'none';
+  focusScan();
+});
+
+document.getElementById('btnOk').addEventListener('click', async ()=>{
+  if(!pending) return;
+  if(reclassifyTargetId){
+    /* Duplicidade confirmada como OK = reteste (ex: peça voltou do conserto e passou no teste de novo).
+       Nunca cria registro novo pra um serial que já existe — só atualiza o original. */
+    await updateRecord(reclassifyTargetId, {
+      retesteAprovado: true,
+      retesteData: new Date().toISOString(),
+      retesteOperador: currentUser,
+    });
+    playOkSound();
+    showToast('Reteste confirmado — peça aprovada (sem duplicar registro)');
+  } else {
+    await saveOkFromPending(pending);
+    playOkSound();
+    showToast('Peça registrada como OK');
+  }
+  pending = null;
+  reclassifyTargetId = null;
+  confirmPanel.classList.remove('show');
+  focusScan();
+  refresh();
+});
+
+document.getElementById('btnDefeitoToggle').addEventListener('click', ()=>{
+  defeitoForm.classList.toggle('show');
+});
+
+document.getElementById('defeitoTipo').addEventListener('change', (e)=>{
+  document.getElementById('defeitoOutrosField').style.display = e.target.value === 'OUTROS' ? 'block' : 'none';
+});
+
+const DEFEITOS_ILUMINACAO = ['POTÊNCIA ALTA','POTÊNCIA BAIXA','NÃO LIGA','NÃO DESLIGA','NÃO GRAVA','ENTROU ÁGUA','MAL CONTATO','ESPANADO','GRAVAÇÃO INCORRETA','CONTAMINAÇÃO','OUTROS'];
+const DEFEITOS_ELETRONICA = ['EM CURTO','POTÊNCIA ALTA','POTÊNCIA BAIXA','NÃO DIMERIZA','NÃO PARTE','NÃO PARAMETRIZA','NÃO LIGA','OUTROS'];
+
+function populateDefeitoTipoSelect(){
+  const lista = currentUnidadeLinha==='Eletrônica' ? DEFEITOS_ELETRONICA : DEFEITOS_ILUMINACAO;
+  const select = document.getElementById('defeitoTipo');
+  select.innerHTML = '<option value="">Selecione...</option>' + lista.map(d=>`<option>${d}</option>`).join('');
+}
+
+function resetDefeitoForm(){
+  populateDefeitoTipoSelect();
+  document.getElementById('defeitoTipo').value = '';
+  document.getElementById('defeitoOutrosField').style.display = 'none';
+  document.getElementById('defeitoOutrosInput').value = '';
+  document.getElementById('causaRaiz').value = '';
+  consertadoValue = null;
+  acaoDefeitoValue = null;
+  document.getElementById('btnConsertadoSim').className = 'toggle-btn';
+  document.getElementById('btnConsertadoNao').className = 'toggle-btn';
+  document.getElementById('btnAcaoConsertar').className = 'toggle-btn';
+  document.getElementById('btnAcaoConserto').className = 'toggle-btn';
+  document.getElementById('consertoImediatoFields').style.display = 'none';
+}
+
+document.getElementById('btnAcaoConsertar').addEventListener('click', ()=>{
+  acaoDefeitoValue = 'consertar';
+  document.getElementById('btnAcaoConsertar').className = 'toggle-btn active-yes';
+  document.getElementById('btnAcaoConserto').className = 'toggle-btn';
+  document.getElementById('consertoImediatoFields').style.display = 'block';
+});
+document.getElementById('btnAcaoConserto').addEventListener('click', ()=>{
+  acaoDefeitoValue = 'conserto';
+  document.getElementById('btnAcaoConserto').className = 'toggle-btn active-yes';
+  document.getElementById('btnAcaoConsertar').className = 'toggle-btn';
+  document.getElementById('consertoImediatoFields').style.display = 'none';
+});
+
+document.getElementById('btnConsertadoSim').addEventListener('click', ()=>{
+  consertadoValue = true;
+  document.getElementById('btnConsertadoSim').className = 'toggle-btn active-yes';
+  document.getElementById('btnConsertadoNao').className = 'toggle-btn';
+});
+document.getElementById('btnConsertadoNao').addEventListener('click', ()=>{
+  consertadoValue = false;
+  document.getElementById('btnConsertadoNao').className = 'toggle-btn active-no';
+  document.getElementById('btnConsertadoSim').className = 'toggle-btn';
+});
+
+document.getElementById('btnSalvarDefeito').addEventListener('click', async ()=>{
+  if(!pending) return;
+  let tipo = document.getElementById('defeitoTipo').value;
+  if(!tipo){ showToast('Selecione o tipo de defeito'); return; }
+  if(tipo === 'OUTROS'){
+    const outros = document.getElementById('defeitoOutrosInput').value.trim();
+    if(!outros){ showToast('Descreva o defeito'); return; }
+    tipo = outros.toUpperCase();
+  }
+  if(!acaoDefeitoValue){ showToast('Escolha o que fazer com a peça: consertar agora ou enviar para conserto'); return; }
+
+  const isConsertarAgora = acaoDefeitoValue === 'consertar';
+  const causa = isConsertarAgora ? (document.getElementById('causaRaiz').value.trim() || null) : null;
+  const consertado = isConsertarAgora ? consertadoValue : null;
+  const statusConserto = isConsertarAgora ? null : 'pendente';
+
+  if(reclassifyTargetId){
+    /* peça que já tinha sido salva como OK/defeito antes e agora está sendo reclassificada.
+       Se ela já tinha passado por um conserto concluído, isso é um NOVO ciclo (reincidência da
+       própria peça) — guarda o ciclo anterior no histórico em vez de simplesmente sobrescrever. */
+    const all = await getAllRecords();
+    const existente = all.find(r=>r.id===reclassifyTargetId);
+    const jaTinhaConsertoConcluido = existente && existente.statusConserto==='concluido';
+    const cicloAnterior = existente && existente.ciclosDefeito ? existente.ciclosDefeito : 1;
+    const ciclosDefeito = jaTinhaConsertoConcluido ? cicloAnterior+1 : cicloAnterior;
+    const historicoCiclos = existente && existente.historicoCiclos ? existente.historicoCiclos.slice() : [];
+    if(jaTinhaConsertoConcluido){
+      historicoCiclos.push({
+        ciclo: cicloAnterior,
+        defeito: existente.defeito,
+        causa: existente.causa,
+        consertado: existente.consertado,
+        consertoOperador: existente.consertoOperador,
+        consertoTimestamp: existente.consertoTimestamp,
+        retesteData: existente.retesteData,
+        retesteOperador: existente.retesteOperador,
+      });
+    }
+    await updateRecord(reclassifyTargetId, {
+      tipo: 'DEFEITO',
+      defeito: tipo,
+      causa,
+      consertado,
+      statusConserto,
+      ciclosDefeito,
+      historicoCiclos,
+      retesteAprovado: false,
+      retesteData: null,
+      retesteOperador: null,
+    });
+    showToast('Peça reclassificada como defeito'+(isConsertarAgora ? '' : ' — enviada para conserto')+(ciclosDefeito>=2 ? ' · ⚠ '+ciclosDefeito+'º ciclo nesta peça' : ''));
+    reclassifyTargetId = null;
+  } else {
+    await addRecord({
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      serial: pending.serial,
+      op: pending.op,
+      sequencial: pending.sequencial,
+      unidade: pending.unidade,
+      linha: (pending.opInfo && pending.opInfo.l) ? pending.opInfo.l : currentLinha,
+      produtoCodigo: pending.opInfo ? pending.opInfo.c : null,
+      produtoDescricao: pending.opInfo ? pending.opInfo.d : null,
+      produtoFamilia: pending.opInfo ? pending.opInfo.f : null,
+      opQuantidade: pending.opInfo ? pending.opInfo.qp : null,
+      opStatus: pending.opInfo ? pending.opInfo.s : null,
+      operador: currentUser,
+      tipo: 'DEFEITO',
+      defeito: tipo,
+      causa,
+      consertado,
+      statusConserto,
+      consertoOperador: null,
+      consertoTimestamp: null,
+      componenteCulpadoSerial: null,
+      componenteCulpadoUnidade: null,
+      ciclosDefeito: 1,
+      historicoCiclos: [],
+    });
+    showToast(isConsertarAgora ? 'Defeito registrado' : 'Defeito registrado — enviado para conserto');
+  }
+  pending = null;
+  confirmPanel.classList.remove('show');
+  document.getElementById('confirmBtnRow').style.display = 'flex';
+  focusScan();
+  refresh();
+});
+
+/* ===================== CONSERTO ===================== */
+let consertoPendingRecord = null;
+let consertoDesfechoValue = null; // 'consertado' | 'descartado' | 'encaminhado' | null
+let consertoDestinoUnidadeValue = null;
+
+/* Cronômetro por peça — pausável, com estado guardado por serial em localStorage
+   (sobrevive a troca de peça no meio do conserto e a recarregar a página). */
+let consertoTimerInterval = null;
+let consertoTimerRecordId = null;
+let consertoTimerAccumulated = 0;  // segundos já contabilizados (enquanto pausado)
+let consertoTimerRunningStart = null; // Date.now() de quando começou a contar de novo, ou null se pausado
+
+function getConsertoTimers(){ return JSON.parse(localStorage.getItem('bipagem_conserto_timers') || '{}'); }
+function saveConsertoTimerState(id, state){
+  const timers = getConsertoTimers();
+  timers[id] = state;
+  localStorage.setItem('bipagem_conserto_timers', JSON.stringify(timers));
+}
+function loadConsertoTimerState(id){
+  const timers = getConsertoTimers();
+  return timers[id] || { accumulated: 0 };
+}
+function clearConsertoTimerState(id){
+  const timers = getConsertoTimers();
+  delete timers[id];
+  localStorage.setItem('bipagem_conserto_timers', JSON.stringify(timers));
+}
+
+function currentConsertoElapsedSeconds(){
+  return consertoTimerAccumulated + (consertoTimerRunningStart ? Math.floor((Date.now()-consertoTimerRunningStart)/1000) : 0);
+}
+function renderConsertoTimerDisplay(){
+  const secs = currentConsertoElapsedSeconds();
+  const mm = String(Math.floor(secs/60)).padStart(2,'0');
+  const ss = String(secs%60).padStart(2,'0');
+  document.getElementById('consertoTimer').textContent = `⏱ ${mm}:${ss}`;
+}
+function updateConsertoPauseButtons(){
+  const running = !!consertoTimerRunningStart;
+  document.getElementById('btnConsertoPausar').style.display = running ? 'inline-block' : 'none';
+  document.getElementById('btnConsertoRetomar').style.display = running ? 'none' : 'inline-block';
+  document.getElementById('consertoTimer').classList.toggle('paused', !running);
+}
+
+function startConsertoTicking(){
+  stopConsertoTicking();
+  consertoTimerInterval = setInterval(renderConsertoTimerDisplay, 1000);
+}
+function stopConsertoTicking(){
+  if(consertoTimerInterval){ clearInterval(consertoTimerInterval); consertoTimerInterval = null; }
+}
+
+/* pausa o cronômetro da peça atualmente aberta, salvando o tempo acumulado — usada tanto pelo
+   botão Pausar quanto automaticamente ao trocar de peça sem finalizar o conserto */
+function pauseConsertoTimer(){
+  if(consertoTimerRunningStart){
+    consertoTimerAccumulated += Math.floor((Date.now()-consertoTimerRunningStart)/1000);
+    consertoTimerRunningStart = null;
+  }
+  stopConsertoTicking();
+  if(consertoTimerRecordId){
+    saveConsertoTimerState(consertoTimerRecordId, {
+      accumulated: consertoTimerAccumulated,
+      causaRaiz: document.getElementById('consertoCausaRaiz').value,
+      componenteSerial: document.getElementById('consertoComponenteSerial').value,
+      desfecho: consertoDesfechoValue,
+      destinoUnidade: consertoDestinoUnidadeValue,
+    });
+  }
+  renderConsertoTimerDisplay();
+  updateConsertoPauseButtons();
+}
+function resumeConsertoTimer(){
+  if(consertoTimerRunningStart) return;
+  consertoTimerRunningStart = Date.now();
+  startConsertoTicking();
+  updateConsertoPauseButtons();
+}
+
+document.getElementById('btnConsertoPausar').addEventListener('click', pauseConsertoTimer);
+document.getElementById('btnConsertoRetomar').addEventListener('click', resumeConsertoTimer);
+
+async function refreshConsertoFila(){
+  document.getElementById('btnConsertoEncaminhado').style.display = currentUnidadeLinha==='Iluminação' ? 'inline-block' : 'none';
+  document.getElementById('componenteExternoBox').style.display = currentUnidadeLinha==='Eletrônica' ? 'block' : 'none';
+  document.getElementById('confirmarRecebimentoBox').style.display = currentUnidadeLinha==='Iluminação' ? 'block' : 'none';
+  const all = await getAllRecords();
+  const pendentes = all.filter(r=>r.statusConserto==='pendente' && r.unidade===currentUnidadeLinha).sort((a,b)=>a.timestamp.localeCompare(b.timestamp));
+  const tbody = document.getElementById('consertoFilaBody');
+  const emptyEl = document.getElementById('consertoFilaEmpty');
+  if(pendentes.length===0){
+    tbody.innerHTML = '';
+    emptyEl.style.display = 'block';
+  } else {
+    emptyEl.style.display = 'none';
+    const timers = getConsertoTimers();
+    tbody.innerHTML = pendentes.map(r=>{
+      const hora = new Date(r.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      const emAndamento = timers[r.id] && timers[r.id].accumulated > 0;
+      const emAndamentoTag = emAndamento
+        ? ` <span class="badge" style="background:var(--amber-dim); color:var(--amber);">⏸ em andamento</span>`
+        : '';
+      return `<tr class="conserto-fila-row" data-id="${r.id}" style="cursor:pointer;">
+        <td>${hora}</td>
+        <td>${escapeHtml(r.linha||'–')}</td>
+        <td>${escapeHtml(r.unidade||'–')}</td>
+        <td>${escapeHtml(r.op||'–')}</td>
+        <td style="font-family:var(--font-mono); font-size:11px;">${r.serial}</td>
+        <td>${escapeHtml(r.defeito||'–')}${emAndamentoTag}</td>
+      </tr>`;
+    }).join('');
+    tbody.querySelectorAll('tr').forEach(tr=>{
+      tr.addEventListener('click', ()=>loadConsertoRecord(tr.dataset.id));
+    });
+  }
+
+  const encaminhados = all.filter(r=>r.statusConserto==='encaminhado').sort((a,b)=>(b.consertoTimestamp||'').localeCompare(a.consertoTimestamp||''));
+  const encBox = document.getElementById('consertoEncaminhadosBox');
+  if(encaminhados.length===0){
+    encBox.style.display = 'none';
+  } else {
+    encBox.style.display = 'block';
+    document.getElementById('consertoEncaminhadosBody').innerHTML = encaminhados.map(r=>{
+      const hora = r.consertoTimestamp ? new Date(r.consertoTimestamp).toLocaleString('pt-BR') : '–';
+      const requisicaoTxt = r.requisicaoMotivo
+        ? `${escapeHtml(r.requisicaoMotivo)} · <span style="font-family:var(--font-mono); font-size:11px;">${escapeHtml(r.requisicaoDriverSerial||'')}</span>`
+        : '–';
+      const btnRequisitar = r.requisicaoMotivo
+        ? ''
+        : `<button class="btn-secondary requisitar-btn" data-id="${r.id}" style="font-size:11px; padding:6px 10px;">Requisitado Novo Driver</button>`;
+      const btnAvaliar = (currentUnidadeLinha==='Eletrônica' && r.componenteCulpadoSerial)
+        ? `<button class="btn-save avaliar-componente-btn" data-serial="${escapeHtml(r.componenteCulpadoSerial)}" data-origem="${r.id}" style="font-size:11px; padding:6px 10px; margin-left:6px;">Avaliar componente</button>`
+        : '';
+      return `<tr>
+        <td>${hora}</td>
+        <td style="font-family:var(--font-mono); font-size:11px;">${r.serial}</td>
+        <td>${escapeHtml(r.defeito||'–')}</td>
+        <td>${escapeHtml(r.encaminhadoParaUnidade||'–')}</td>
+        <td>${requisicaoTxt}</td>
+        <td>${btnRequisitar}${btnAvaliar}</td>
+      </tr>`;
+    }).join('');
+    document.querySelectorAll('.avaliar-componente-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>iniciarConsertoComponenteExterno(btn.dataset.serial, btn.dataset.origem));
+    });
+    document.querySelectorAll('.requisitar-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>abrirRequisicao(btn.dataset.id));
+    });
+  }
+
+  refreshAcoesQualidade();
+  renderAguardandoReteste(all);
+}
+
+function renderAguardandoReteste(all){
+  const pendentesReteste = all.filter(r=>
+    r.tipo==='DEFEITO' && r.statusConserto==='concluido' && r.consertado===true && !r.retesteAprovado && r.unidade===currentUnidadeLinha
+  ).sort((a,b)=>(b.consertoTimestamp||b.timestamp).localeCompare(a.consertoTimestamp||a.timestamp));
+
+  const box = document.getElementById('aguardandoResteBox');
+  if(pendentesReteste.length===0){ box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  document.getElementById('aguardandoResteBody').innerHTML = pendentesReteste.map(r=>{
+    const dt = r.consertoTimestamp ? new Date(r.consertoTimestamp).toLocaleString('pt-BR') : '–';
+    return `<tr>
+      <td style="font-family:var(--font-mono); font-size:11px;">${r.serial}</td>
+      <td>${escapeHtml(r.op||'–')}</td>
+      <td>${escapeHtml(r.linha||'–')}</td>
+      <td>${escapeHtml(r.defeito||'–')}</td>
+      <td>${dt}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadConsertoRecord(id){
+  const all = await getAllRecords();
+  const rec = all.find(r=>r.id===id);
+  if(!rec){ showToast('Registro não encontrado'); return; }
+
+  /* se havia outra peça aberta, pausa e guarda o progresso dela (tempo + rascunho) antes de trocar */
+  if(consertoTimerRecordId && consertoTimerRecordId !== id){
+    pauseConsertoTimer();
+  }
+
+  consertoPendingRecord = rec;
+  document.getElementById('consertoInfo').innerHTML = `<b>${escapeHtml(rec.produtoDescricao || rec.produtoCodigo || 'Produto sem descrição')}</b><br>Serial ${rec.serial} · OP ${escapeHtml(rec.op||'–')} · Linha ${escapeHtml(rec.linha||'–')} · Defeito: ${escapeHtml(rec.defeito||'–')}`;
+
+  /* Conserto de componente vindo de outra unidade (ex: driver da Eletrônica) não tem sentido
+     apontar "outro componente culpado" — esse campo é só pra defeito de produto final (luminária)
+     que aponta um driver como causa. */
+  const ehComponenteExterno = rec.tipo === 'COMPONENTE_EXTERNO';
+  document.getElementById('consertoComponenteSerialField').style.display = ehComponenteExterno ? 'none' : 'block';
+
+  /* Linha Ex não permite conserto de driver — só troca. Some com "Encaminhar" (que implica
+     conserto na Eletrônica) e mostra o desfecho específico de substituição. */
+  const ehLinhaEx = isLinhaEx(rec.linha) && !ehComponenteExterno;
+  document.getElementById('btnConsertoEncaminhado').style.display = (currentUnidadeLinha==='Iluminação' && !ehLinhaEx) ? 'inline-block' : 'none';
+  document.getElementById('btnConsertoSubstituirDriver').style.display = ehLinhaEx ? 'inline-block' : 'none';
+
+  const saved = loadConsertoTimerState(id);
+  document.getElementById('consertoCausaRaiz').value = saved.causaRaiz || '';
+  document.getElementById('consertoComponenteSerial').value = ehComponenteExterno ? '' : (saved.componenteSerial || '');
+  document.getElementById('consertoDriverSubstituto').value = '';
+  consertoDesfechoValue = saved.desfecho || null;
+  consertoDestinoUnidadeValue = saved.destinoUnidade || null;
+  atualizarBotoesDesfecho();
+  document.getElementById('consertoFormBox').style.display = 'block';
+
+  consertoTimerRecordId = id;
+  consertoTimerAccumulated = saved.accumulated || 0;
+  consertoTimerRunningStart = null;
+  renderConsertoTimerDisplay();
+  resumeConsertoTimer();
+}
+
+document.getElementById('consertoScanInput').addEventListener('keydown', async (e)=>{
+  if(e.key !== 'Enter') return;
+  const raw = e.target.value;
+  e.target.value = '';
+  if(!raw.trim()) return;
+  const parsed = parseSerial(raw);
+  const serial = parsed ? parsed.serial : onlyDigits(raw);
+  const all = await getAllRecords();
+  const match = all.find(r=>r.serial===serial && r.statusConserto==='pendente');
+  if(!match){ showToast('Nenhum conserto pendente para este serial'); return; }
+  loadConsertoRecord(match.id);
+});
+
+document.getElementById('componenteExternoScanInput').addEventListener('keydown', async (e)=>{
+  if(e.key !== 'Enter') return;
+  const raw = e.target.value;
+  e.target.value = '';
+  if(!raw.trim()) return;
+  await iniciarConsertoComponenteExterno(raw, null);
+});
+
+document.getElementById('confirmarRecebimentoScanInput').addEventListener('keydown', async (e)=>{
+  if(e.key !== 'Enter') return;
+  const raw = e.target.value;
+  e.target.value = '';
+  if(!raw.trim()) return;
+  const parsed = parseSerial(raw);
+  if(!parsed){ showToast('Código inválido — bipe novamente'); return; }
+  const locais = (await getAllRecords()).sort((a,b)=>b.timestamp.localeCompare(a.timestamp));
+  const alvo = locais.find(r=>r.componenteCulpadoSerial===parsed.serial && r.componenteConsertoStatus && !r.componenteRecebidoConfirmado);
+  if(!alvo){
+    const jaConfirmado = locais.find(r=>r.componenteCulpadoSerial===parsed.serial && r.componenteRecebidoConfirmado);
+    if(jaConfirmado){ showToast('Este driver já teve o recebimento confirmado antes'); return; }
+    showToast('Nenhuma peça aguardando recebimento desse driver — confira se o conserto na Eletrônica já foi concluído');
+    return;
+  }
+  await updateRecord(alvo.id, {
+    componenteRecebidoConfirmado: true,
+    componenteRecebidoData: new Date().toISOString(),
+    componenteRecebidoOperador: currentUser,
+  });
+  showToast('Recebimento confirmado — peça pronta pra remontagem/reteste');
+  refresh();
+  refreshConsertoFila();
+});
+
+/* Cria (ou reabre, se já existir) o registro de conserto de um componente vindo de outra
+   unidade — usado tanto pela bipagem direta do serial quanto pelo botão de ação na lista
+   de "Encaminhadas para outra área" (evita a Eletrônica ter que redigitar o serial do driver). */
+async function iniciarConsertoComponenteExterno(serialRaw, origemEncaminhamentoId){
+  const parsed = parseSerial(serialRaw);
+  if(!parsed){ showToast('Código inválido — bipe novamente'); return; }
+  const all = await getAllRecords();
+  const jaExiste = all.find(r=>r.serial===parsed.serial && r.tipo==='COMPONENTE_EXTERNO' && r.statusConserto==='pendente');
+  if(jaExiste){ loadConsertoRecord(jaExiste.id); return; }
+  const id = crypto.randomUUID();
+  await addRecord({
+    id,
+    timestamp: new Date().toISOString(),
+    serial: parsed.serial,
+    op: parsed.op,
+    sequencial: parsed.sequencial,
+    unidade: parsed.unidade,
+    linha: null,
+    produtoCodigo: null,
+    produtoDescricao: 'Componente recebido de outra unidade para conserto',
+    produtoFamilia: null,
+    opQuantidade: null,
+    opStatus: null,
+    operador: currentUser,
+    tipo: 'COMPONENTE_EXTERNO',
+    defeito: null,
+    causa: null,
+    consertado: null,
+    statusConserto: 'pendente',
+    consertoOperador: null,
+    consertoTimestamp: null,
+    componenteCulpadoSerial: null,
+    componenteCulpadoUnidade: null,
+    origemEncaminhamentoId: origemEncaminhamentoId || null,
+  });
+  showToast('Componente registrado — iniciando avaliação de conserto');
+  loadConsertoRecord(id);
+}
+
+function atualizarBotoesDesfecho(){
+  document.getElementById('btnConsertoSim').className = consertoDesfechoValue==='consertado' ? 'toggle-btn active-yes' : 'toggle-btn';
+  document.getElementById('btnConsertoNao').className = consertoDesfechoValue==='descartado' ? 'toggle-btn active-no' : 'toggle-btn';
+  document.getElementById('btnConsertoEncaminhado').className = consertoDesfechoValue==='encaminhado' ? 'toggle-btn active-yes' : 'toggle-btn';
+  document.getElementById('btnConsertoSubstituirDriver').className = consertoDesfechoValue==='substituir_driver' ? 'toggle-btn active-yes' : 'toggle-btn';
+  document.getElementById('consertoDestinoField').style.display = consertoDesfechoValue==='encaminhado' ? 'block' : 'none';
+  document.getElementById('consertoDriverSubstitutoField').style.display = consertoDesfechoValue==='substituir_driver' ? 'block' : 'none';
+}
+
+document.getElementById('btnConsertoSim').addEventListener('click', ()=>{
+  consertoDesfechoValue = 'consertado';
+  atualizarBotoesDesfecho();
+});
+document.getElementById('btnConsertoNao').addEventListener('click', ()=>{
+  consertoDesfechoValue = 'descartado';
+  atualizarBotoesDesfecho();
+});
+document.getElementById('btnConsertoEncaminhado').addEventListener('click', ()=>{
+  consertoDesfechoValue = 'encaminhado';
+  consertoDestinoUnidadeValue = 'Eletrônica'; // único destino possível hoje — só Iluminação encaminha, sempre pra Eletrônica
+  atualizarBotoesDesfecho();
+});
+document.getElementById('btnConsertoSubstituirDriver').addEventListener('click', ()=>{
+  consertoDesfechoValue = 'substituir_driver';
+  atualizarBotoesDesfecho();
+});
+
+document.getElementById('btnConsertoCancelar').addEventListener('click', ()=>{
+  pauseConsertoTimer(); // guarda tempo + rascunho — a peça continua na fila pra retomar depois
+  consertoPendingRecord = null;
+  document.getElementById('consertoFormBox').style.display = 'none';
+});
+
+document.getElementById('btnConsertoSalvar').addEventListener('click', async ()=>{
+  if(!consertoPendingRecord) return;
+  if(!consertoDesfechoValue){ showToast('Informe o desfecho da peça: consertado, descartado, encaminhado ou substituir driver'); return; }
+  if(consertoDesfechoValue==='encaminhado' && currentUnidadeLinha!=='Iluminação'){ showToast('Só a Iluminação pode encaminhar peças pra outra unidade'); return; }
+  const causa = document.getElementById('consertoCausaRaiz').value.trim() || null;
+  if(!causa){ showToast('Descreva a causa raiz — não é possível salvar o conserto sem essa informação'); return; }
+  const componenteRaw = document.getElementById('consertoComponenteSerial').value.trim();
+  if(consertoDesfechoValue==='encaminhado' && !componenteRaw){ showToast('Bipe o serial do driver — obrigatório pra liberar o encaminhamento pra Eletrônica'); return; }
+  if(consertoDesfechoValue==='substituir_driver' && !componenteRaw){ showToast('Bipe o serial do driver retirado (que vira Refletor) — obrigatório'); return; }
+  let componenteCulpadoSerial = null, componenteCulpadoUnidade = null;
+  if(componenteRaw){
+    const parsedComponente = parseSerial(componenteRaw);
+    if(!parsedComponente){ showToast('Serial do componente inválido — confira o código bipado'); return; }
+    componenteCulpadoSerial = parsedComponente.serial;
+    componenteCulpadoUnidade = parsedComponente.unidade;
+  }
+  let driverSubstitutoSerial = null;
+  if(consertoDesfechoValue==='substituir_driver'){
+    const substitutoRaw = document.getElementById('consertoDriverSubstituto').value.trim();
+    if(!substitutoRaw){ showToast('Bipe o serial do driver novo instalado — obrigatório'); return; }
+    const parsedSubstituto = parseSerial(substitutoRaw);
+    if(!parsedSubstituto){ showToast('Serial do driver novo inválido — confira o código bipado'); return; }
+    driverSubstitutoSerial = parsedSubstituto.serial;
+  }
+  const tempoConsertoSegundos = currentConsertoElapsedSeconds();
+  const consertado = (consertoDesfechoValue==='consertado' || consertoDesfechoValue==='substituir_driver') ? true : consertoDesfechoValue==='descartado' ? false : null;
+  const statusConserto = consertoDesfechoValue==='encaminhado' ? 'encaminhado' : 'concluido';
+  const encaminhadoParaUnidade = consertoDesfechoValue==='encaminhado' ? 'Eletrônica' : null;
+  const driverAntigoNovaClassificacao = consertoDesfechoValue==='substituir_driver' ? 'Refletor' : null;
+
+  /* checa reincidência do componente ANTES de salvar este apontamento (pra contar corretamente
+     quantas vezes esse serial já tinha sido apontado antes deste) */
+  let reincidencias = 0;
+  if(componenteCulpadoSerial){
+    const consolidados = await getConsolidatedRecords();
+    reincidencias = consolidados.filter(r=>r.componenteCulpadoSerial===componenteCulpadoSerial).length;
+  }
+
+  try{
+    await updateRecord(consertoPendingRecord.id, {
+      causa,
+      consertado,
+      statusConserto,
+      encaminhadoParaUnidade,
+      consertoOperador: currentUser,
+      consertoTimestamp: new Date().toISOString(),
+      tempoConsertoSegundos,
+      componenteCulpadoSerial,
+      componenteCulpadoUnidade,
+      driverSubstitutoSerial,
+      driverAntigoNovaClassificacao,
+    });
+    const isComponenteExterno = consertoPendingRecord.tipo === 'COMPONENTE_EXTERNO';
+    const componenteSerial = consertoPendingRecord.serial;
+    showToast(consertoDesfechoValue==='encaminhado' ? 'Peça encaminhada para Eletrônica' : consertoDesfechoValue==='substituir_driver' ? 'Driver substituído — o retirado foi reclassificado como Refletor' : 'Conserto registrado');
+    clearConsertoTimerState(consertoPendingRecord.id);
+    stopConsertoTicking();
+    consertoTimerRecordId = null;
+    consertoTimerAccumulated = 0;
+    consertoTimerRunningStart = null;
+    consertoPendingRecord = null;
+    document.getElementById('consertoFormBox').style.display = 'none';
+    if(componenteCulpadoSerial && reincidencias>=1){
+      mostrarAvisoReincidencia(componenteCulpadoSerial, componenteCulpadoUnidade, reincidencias+1);
+    }
+    if(isComponenteExterno && statusConserto==='concluido'){
+      const atualizou = await cruzarComponenteExternoUm({ serial: componenteSerial, consertado, causa, consertoTimestamp: new Date().toISOString(), consertoOperador: currentUser });
+      if(atualizou) showToast('Conserto registrado — atualizado no registro original da Iluminação');
+    }
+    refreshConsertoFila();
+    refresh();
+  } catch(err){
+    console.error(err);
+    showToast('Erro ao salvar: ' + err.message);
+  }
+});
+
+/* ===================== REQUISIÇÃO DE NOVO DRIVER ===================== */
+let requisicaoTargetId = null;
+let requisicaoMotivoValue = null;
+
+async function abrirRequisicao(id){
+  const all = await getAllRecords();
+  const rec = all.find(r=>r.id===id);
+  if(!rec){ showToast('Registro não encontrado'); return; }
+  requisicaoTargetId = id;
+  requisicaoMotivoValue = null;
+  document.getElementById('requisicaoInfo').innerHTML = `Peça original: <b>${rec.serial}</b> · encaminhada pra ${escapeHtml(rec.encaminhadoParaUnidade||'–')} · Defeito: ${escapeHtml(rec.defeito||'–')}`;
+  document.getElementById('requisicaoDriverSerial').value = '';
+  document.getElementById('btnRequisicaoDescarte').className = 'toggle-btn';
+  document.getElementById('btnRequisicaoUrgencia').className = 'toggle-btn';
+  document.getElementById('requisicaoFormBox').style.display = 'block';
+  document.getElementById('requisicaoFormBox').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+document.getElementById('btnRequisicaoDescarte').addEventListener('click', ()=>{
+  requisicaoMotivoValue = 'Descarte';
+  document.getElementById('btnRequisicaoDescarte').className = 'toggle-btn active-no';
+  document.getElementById('btnRequisicaoUrgencia').className = 'toggle-btn';
+});
+document.getElementById('btnRequisicaoUrgencia').addEventListener('click', ()=>{
+  requisicaoMotivoValue = 'Urgência';
+  document.getElementById('btnRequisicaoUrgencia').className = 'toggle-btn active-yes';
+  document.getElementById('btnRequisicaoDescarte').className = 'toggle-btn';
+});
+document.getElementById('btnRequisicaoCancelar').addEventListener('click', ()=>{
+  requisicaoTargetId = null;
+  document.getElementById('requisicaoFormBox').style.display = 'none';
+});
+document.getElementById('btnRequisicaoSalvar').addEventListener('click', async ()=>{
+  if(!requisicaoTargetId) return;
+  if(!requisicaoMotivoValue){ showToast('Selecione o motivo: descarte ou urgência'); return; }
+  const driverRaw = document.getElementById('requisicaoDriverSerial').value.trim();
+  if(!driverRaw){ showToast('Bipe o serial do driver novo'); return; }
+  const parsedDriver = parseSerial(driverRaw);
+  if(!parsedDriver){ showToast('Serial do driver novo inválido — confira o código bipado'); return; }
+  try{
+    await updateRecord(requisicaoTargetId, {
+      requisicaoMotivo: requisicaoMotivoValue,
+      requisicaoDriverSerial: parsedDriver.serial,
+      requisicaoData: new Date().toISOString(),
+      requisicaoOperador: currentUser,
+    });
+    showToast('Requisição registrada');
+    requisicaoTargetId = null;
+    document.getElementById('requisicaoFormBox').style.display = 'none';
+    refreshConsertoFila();
+  } catch(err){
+    console.error(err);
+    showToast('Erro ao salvar: ' + err.message);
+  }
+});
+
+/* ===================== REINCIDÊNCIA E AÇÃO DE QUALIDADE/ENGENHARIA ===================== */
+let reincidenciaAtual = null; // {serial, unidade, ocorrencias}
+
+function mostrarAvisoReincidencia(serial, unidade, ocorrencias){
+  reincidenciaAtual = { serial, unidade, ocorrencias };
+  document.getElementById('reincidenciaAviso').innerHTML = `⚠ <b>Componente reincidente</b> — o serial <b>${escapeHtml(serial)}</b> (${escapeHtml(unidade||'–')}) já foi apontado como causa de defeito <b>${ocorrencias}x</b>. Vale abrir uma ação com Qualidade/Engenharia?`;
+  document.getElementById('reincidenciaBox').style.display = 'block';
+  document.getElementById('reincidenciaBox').scrollIntoView({behavior:'smooth', block:'center'});
+}
+document.getElementById('btnDispensarReincidencia').addEventListener('click', ()=>{
+  reincidenciaAtual = null;
+  document.getElementById('reincidenciaBox').style.display = 'none';
+});
+document.getElementById('btnAbrirAcaoQualidade').addEventListener('click', async ()=>{
+  if(!reincidenciaAtual) return;
+  await addRecord({
+    id: crypto.randomUUID(),
+    timestamp: new Date().toISOString(),
+    tipo: 'ACAO_QUALIDADE',
+    componenteSerial: reincidenciaAtual.serial,
+    componenteUnidade: reincidenciaAtual.unidade,
+    reincidencias: reincidenciaAtual.ocorrencias,
+    descricao: `Componente reincidente (${reincidenciaAtual.ocorrencias}x) apontado como causa de defeito.`,
+    status: 'Aberta',
+    aberturaOperador: currentUser,
+    aberturaData: new Date().toISOString(),
+    conclusaoOperador: null,
+    conclusaoData: null,
+  });
+  showToast('Ação de Qualidade/Engenharia aberta');
+  reincidenciaAtual = null;
+  document.getElementById('reincidenciaBox').style.display = 'none';
+  refreshAcoesQualidade();
+});
+
+async function refreshAcoesQualidade(){
+  const all = await getAllRecords();
+  const acoes = all.filter(r=>r.tipo==='ACAO_QUALIDADE').sort((a,b)=>b.aberturaData.localeCompare(a.aberturaData));
+  const box = document.getElementById('acoesQualidadeBox');
+  if(acoes.length===0){ box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  document.getElementById('acoesQualidadeBody').innerHTML = acoes.map(a=>{
+    const data = new Date(a.aberturaData).toLocaleDateString('pt-BR');
+    const statusBadge = a.status==='Concluída'
+      ? '<span class="badge badge-ok">Concluída</span>'
+      : '<span class="badge badge-defeito">Aberta</span>';
+    const btn = a.status==='Aberta'
+      ? `<button class="btn-secondary concluir-acao-btn" data-id="${a.id}" style="font-size:11px; padding:6px 10px;">Marcar concluída</button>`
+      : '';
+    return `<tr>
+      <td>${data}</td>
+      <td style="font-family:var(--font-mono); font-size:11px;">${escapeHtml(a.componenteSerial)} <span style="color:var(--text-faint);">(${escapeHtml(a.componenteUnidade||'–')})</span></td>
+      <td>${a.reincidencias}</td>
+      <td>${statusBadge}</td>
+      <td>${btn}</td>
+    </tr>`;
+  }).join('');
+  document.querySelectorAll('.concluir-acao-btn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      await updateRecord(btn.dataset.id, {
+        status: 'Concluída',
+        conclusaoOperador: currentUser,
+        conclusaoData: new Date().toISOString(),
+      });
+      showToast('Ação marcada como concluída');
+      refreshAcoesQualidade();
+    });
+  });
+}
+
+/* ===================== FILTROS ===================== */
+document.querySelectorAll('.pill').forEach(p=>{
+  p.addEventListener('click', ()=>{
+    document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
+    p.classList.add('active');
+    activeFilter = p.dataset.filter;
+    refresh();
+  });
+});
+
+function isToday(iso){
+  const d = new Date(iso);
+  const now = new Date();
+  return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth() && d.getDate()===now.getDate();
+}
+
+/* ===================== RENDER ===================== */
+/* Abre o formulário de defeito direto pra uma peça já bipada como OK (fluxo "marcar depois",
+   usado quando a confirmação automática já salvou a peça e o defeito só foi percebido em seguida). */
+async function openReclassifyDefeito(id){
+  const all = await getAllRecords();
+  const rec = all.find(r=>r.id===id);
+  if(!rec){ showToast('Registro não encontrado'); return; }
+  if(rec.tipo !== 'OK'){ showToast('Essa peça já está registrada com defeito'); return; }
+
+  reclassifyTargetId = id;
+  pending = {
+    serial: rec.serial, op: rec.op, unidade: rec.unidade, sequencial: rec.sequencial,
+    opInfo: rec.produtoDescricao || rec.produtoCodigo || rec.linha ? {
+      c: rec.produtoCodigo, d: rec.produtoDescricao, f: rec.produtoFamilia,
+      qp: rec.opQuantidade, s: rec.opStatus, l: rec.linha,
+    } : null,
+  };
+
+  document.getElementById('confirmOp').textContent = 'OP ' + (rec.op||'–') + ' · ' + (rec.unidade||'–');
+  document.getElementById('confirmSerial').textContent = rec.serial + ' · seq. ' + (rec.sequencial||'–') + ' · bipada às ' + new Date(rec.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('unidadeWarning').style.display = 'none';
+  document.getElementById('dupWarning').style.display = 'none';
+  const confirmProduto = document.getElementById('confirmProduto');
+  if(pending.opInfo){
+    const info = pending.opInfo;
+    const qtd = info.qp != null ? info.qp.toLocaleString('pt-BR') : '?';
+    confirmProduto.innerHTML = `<b>${escapeHtml(info.d || info.c || 'Produto sem descrição')}</b><br>Cód. ${escapeHtml(info.c||'–')} · Qtd. da OP: ${qtd}${info.s ? ' · Status: '+escapeHtml(info.s) : ''}${info.l ? ' · Linha: '+escapeHtml(info.l) : ''}${info.f ? ' · Família: '+escapeHtml(info.f) : ''}`;
+    confirmProduto.style.display = 'block';
+  } else {
+    confirmProduto.style.display = 'none';
+  }
+
+  document.getElementById('confirmBtnRow').style.display = 'none'; // já sabemos que é defeito — pula direto pro formulário
+  confirmPanel.classList.add('show');
+  resetDefeitoForm();
+  defeitoForm.classList.add('show');
+}
+
+async function refresh(){
+  const all = (await getAllRecords()).filter(r=>(r.tipo==='OK' || r.tipo==='DEFEITO') && r.unidade===currentUnidadeLinha);
+  const rows = activeFilter==='hoje' ? all.filter(r=>isToday(r.timestamp)) : all;
+  rows.sort((a,b)=> b.timestamp.localeCompare(a.timestamp));
+
+  const total = rows.length;
+  const defeitos = rows.filter(r=>r.tipo==='DEFEITO').length;
+  const consertados = rows.filter(r=>r.tipo==='DEFEITO' && r.consertado===true).length;
+  const taxa = total>0 ? (defeitos/total)*100 : 0;
+  const taxaOk = taxa <= META_TAXA_DEFEITO;
+
+  const cards = [
+    { num: total, lbl: 'Peças bipadas', accent: 'var(--border-strong)' },
+    { num: defeitos, lbl: 'Defeitos', accent: defeitos ? 'var(--red)' : 'var(--border)' },
+    { num: taxa.toFixed(2).replace('.',',')+'%', lbl: 'Taxa de defeito · meta '+String(META_TAXA_DEFEITO).replace('.',',')+'%', accent: taxaOk ? 'var(--teal)' : 'var(--red)' },
+  ];
+  document.getElementById('cards').innerHTML = cards.map(c=>`
+    <div class="card" style="--card-accent:${c.accent}">
+      <div class="num">${c.num}</div>
+      <div class="lbl">${c.lbl}</div>
+    </div>
+  `).join('');
+
+  const tbody = document.getElementById('tableBody');
+  const emptyState = document.getElementById('emptyState');
+  if(rows.length===0){
+    tbody.innerHTML = '';
+    emptyState.style.display = 'block';
+  } else {
+    emptyState.style.display = 'none';
+    tbody.innerHTML = rows.map(r=>{
+      const hora = new Date(r.timestamp).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+      const statusBadge = r.tipo==='OK'
+        ? '<span class="badge badge-ok">OK</span>'
+        : '<span class="badge badge-defeito">DEFEITO</span>';
+      const consertadoTxt = r.statusConserto==='pendente'
+        ? '<span class="badge" style="background:var(--amber-dim); color:var(--amber);">Aguard. conserto</span>'
+        : r.statusConserto==='encaminhado'
+        ? `<span class="badge" style="background:var(--amber-dim); color:var(--amber);">→ ${escapeHtml(r.encaminhadoParaUnidade||'outra área')}</span>`
+        : r.consertado===true ? 'Sim' : r.consertado===false ? 'Não' : '–';
+      const clicavel = r.tipo==='OK';
+      return `<tr${clicavel ? ` class="row-ok-clicavel" data-id="${r.id}" style="cursor:pointer;" title="Toque para marcar defeito nesta peça"` : ''}>
+        <td>${hora}</td>
+        <td>${r.linha || '–'}</td>
+        <td>${r.unidade || '–'}</td>
+        <td>${r.op || '–'}</td>
+        <td style="font-family:var(--font-mono); font-size:11px;">${r.serial || '–'}</td>
+        <td>${statusBadge}</td>
+        <td>${r.defeito || '–'}${r.causa ? '<br><span style="color:var(--text-faint)">'+escapeHtml(r.causa)+'</span>' : ''}${r.ciclosDefeito>=2 ? '<br><span class="badge badge-defeito">⚠ '+r.ciclosDefeito+'º ciclo — reincidente</span>' : ''}${r.componenteConsertoStatus ? '<br><span style="color:var(--verde-escuro); font-weight:600;">Componente: '+escapeHtml(r.componenteConsertoStatus)+'</span>'+(r.componenteConsertoCausa ? ' <span style="color:var(--text-faint)">('+escapeHtml(r.componenteConsertoCausa)+')</span>' : '')+(r.componenteRecebidoConfirmado ? ' <span style="color:var(--teal);">· recebido de volta ✓</span>' : ' <span style="color:var(--amber);">· aguardando recebimento</span>') : ''}</td>
+        <td>${consertadoTxt}</td>
+      </tr>`;
+    }).join('');
+    tbody.querySelectorAll('.row-ok-clicavel').forEach(tr=>{
+      tr.addEventListener('click', ()=>openReclassifyDefeito(tr.dataset.id));
+    });
+  }
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ===================== EXPORTAR CSV ===================== */
+document.getElementById('btnExportCsv').addEventListener('click', async ()=>{
+  const all = await getAllRecords();
+  all.sort((a,b)=> a.timestamp.localeCompare(b.timestamp));
+  const header = ['Data/Hora','Unidade','Linha','OP','Sequencial','Serial','Cód. Produto','Descrição Produto','Família Produto','Qtd. OP','Status OP','Operador','Status','Defeito','Causa Raiz','Consertado','Status Conserto','Encaminhado Para Unidade','Operador Conserto','Data/Hora Conserto','Tempo Conserto (s)','Serial Componente Culpado','Unidade Componente Culpado','Requisição Motivo','Requisição Driver Serial','Requisição Data','Requisição Operador'];
+  const lines = [header.join(';')];
+  all.forEach(r=>{
+    const dt = new Date(r.timestamp).toLocaleString('pt-BR');
+    const consertadoTxt = r.consertado===true ? 'Sim' : r.consertado===false ? 'Não' : '';
+    const consertoDt = r.consertoTimestamp ? new Date(r.consertoTimestamp).toLocaleString('pt-BR') : '';
+    const requisicaoDt = r.requisicaoData ? new Date(r.requisicaoData).toLocaleString('pt-BR') : '';
+    const row = [dt, r.unidade||'', r.linha||'', r.op||'', r.sequencial||'', r.serial||'', r.produtoCodigo||'', r.produtoDescricao||'', r.produtoFamilia||'', r.opQuantidade!=null?r.opQuantidade:'', r.opStatus||'', r.operador||'', r.tipo, r.defeito||'', r.causa||'', consertadoTxt, r.statusConserto||'', r.encaminhadoParaUnidade||'', r.consertoOperador||'', consertoDt, r.tempoConsertoSegundos!=null?r.tempoConsertoSegundos:'', r.componenteCulpadoSerial||'', r.componenteCulpadoUnidade||'', r.requisicaoMotivo||'', r.requisicaoDriverSerial||'', requisicaoDt, r.requisicaoOperador||''];
+    lines.push(row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';'));
+  });
+  const csv = '\uFEFF' + lines.join('\r\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,10);
+  const linhaTag = currentLinha ? `_linha-${String(currentLinha).replace(/\s+/g,'-')}` : '';
+  a.href = url; a.download = `bipagem-teste-driver${linhaTag}_${stamp}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ===================== LIMPAR DADOS ===================== */
+document.getElementById('btnClear').addEventListener('click', async ()=>{
+  if(!confirm('Isso vai apagar todos os registros salvos neste tablet. Exporte o CSV antes, se ainda não exportou. Confirma a limpeza?')) return;
+  await clearAllRecords();
+  showToast('Dados locais apagados');
+  refresh();
+});
+
+/* ===================== NAVEGAÇÃO ENTRE ABAS ===================== */
+/* ===================== CERTIFICADOS ===================== */
+let certActivePage = 'dashboard';
+let certStatusFiltro = 'pendentes'; // já abre filtrado nas pendentes, que é o que mais interessa acompanhar
+
+function initCertSubnav(){
+  const pills = [
+    {id:'dashboard', label:'Dashboard'},
+    {id:'emitir', label:'Emitir Certificados'},
+    {id:'linhaex', label:'🦺 Linha Ex'},
+    {id:'word', label:'Arquivos Word'},
+    {id:'pdf', label:'Arquivos PDF'},
+  ];
+  const el = document.getElementById('certSubnavPills');
+  el.innerHTML = pills.map(p=>`<div class="pill${certActivePage===p.id?' active':''}" data-page="${p.id}">${escapeHtml(p.label)}</div>`).join('');
+  el.querySelectorAll('.pill').forEach(p=>{
+    p.addEventListener('click', ()=>{
+      certActivePage = p.dataset.page;
+      el.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
+      p.classList.add('active');
+      certShowPage(certActivePage);
+    });
+  });
+}
+
+function certShowPage(page){
+  document.getElementById('certPageDashboard').style.display = page==='dashboard' ? 'block':'none';
+  document.getElementById('certPageEmitir').style.display = page==='emitir' ? 'block':'none';
+  document.getElementById('certPageLinhaEx').style.display = page==='linhaex' ? 'block':'none';
+  document.getElementById('certPageWord').style.display = page==='word' ? 'block':'none';
+  document.getElementById('certPagePdf').style.display = page==='pdf' ? 'block':'none';
+}
+
+/* Regra de liberação: 100% da quantidade da OP bipada + nenhum defeito daquela OP com
+   conserto pendente/encaminhado. Usa os mesmos dados de bipagem (local + importado) e a
+   mesma base de OPs (MPOP207) já usados no resto do app — nada precisa ser importado de novo aqui. */
+/* ===================== JUSTIFICATIVA DE OP PARADA (3+ dias úteis sem movimentação) ===================== */
+async function getJustificativasOp(){
+  const all = await getAllRecords();
+  return all.filter(r=>r.tipo==='JUSTIFICATIVA_OP');
+}
+
+/* Comprime uma lista ordenada de números em faixas legíveis, ex: [1,2,3,7,9,10] -> ["1-3","7","9-10"] */
+function comprimirFaixas(nums){
+  const faixas = [];
+  let inicio = null, anterior = null;
+  nums.forEach(n=>{
+    if(inicio===null){ inicio = n; anterior = n; return; }
+    if(n === anterior+1){ anterior = n; return; }
+    faixas.push(inicio===anterior ? String(inicio) : `${inicio}-${anterior}`);
+    inicio = n; anterior = n;
+  });
+  if(inicio!==null) faixas.push(inicio===anterior ? String(inicio) : `${inicio}-${anterior}`);
+  return faixas;
+}
+
+async function computeCertificadoElegibilidade(){
+  /* Certificado de Aprovação se refere ao produto final montado pra venda — só existe
+     pra Iluminação. Eletrônica fica de fora dessa conta inteiramente. */
+  const all = (await getConsolidatedRecords()).filter(r=>r.unidade==='Iluminação' && (r.tipo==='OK' || r.tipo==='DEFEITO'));
+  const opDb = getOpDb();
+  const justificativas = await getJustificativasOp();
+  const byOp = new Map();
+  all.forEach(r=>{
+    if(!r.op) return;
+    if(!byOp.has(r.op)) byOp.set(r.op, { op:r.op, linha:null, unidade:null, produtoDescricao:null, seriais:new Set(), sequenciais:new Set(), larguraSequencial:4, defeitosPendentes:0, ultimaMovimentacao:null });
+    const g = byOp.get(r.op);
+    if(r.serial) g.seriais.add(r.serial); // conta a peça física uma única vez, mesmo se foi bipada de novo (reteste)
+    if(r.sequencial){
+      const n = parseInt(r.sequencial, 10);
+      if(!isNaN(n)) g.sequenciais.add(n);
+      g.larguraSequencial = r.sequencial.length; // sequencial é por OP — usa a largura real bipada (4 ou 6 dígitos)
+    }
+    if(!g.linha && r.linha) g.linha = r.linha;
+    if(!g.unidade && r.unidade) g.unidade = r.unidade;
+    if(!g.produtoDescricao && r.produtoDescricao) g.produtoDescricao = r.produtoDescricao;
+    if(r.tipo==='DEFEITO' && (r.statusConserto==='pendente' || r.statusConserto==='encaminhado')) g.defeitosPendentes++;
+    if(!g.ultimaMovimentacao || r.timestamp>g.ultimaMovimentacao) g.ultimaMovimentacao = r.timestamp;
+  });
+  const linhas = [];
+  byOp.forEach(g=>{
+    g.total = g.seriais.size;
+    const info = opDb[g.op];
+    const opQuantidade = info ? info.qp : null;
+    const linha = g.linha || (info ? info.l : null);
+    const linhaEx = isLinhaEx(linha);
+    const completo = opQuantidade!=null && g.total >= opQuantidade;
+    const elegivel = completo && g.defeitosPendentes===0 && !linhaEx;
+    const justificativa = justificativas.find(j=>j.op===g.op) || null;
+    const diasUteisParado = businessDaysSince(g.ultimaMovimentacao);
+    const precisaJustificar = !linhaEx && !elegivel && !justificativa && diasUteisParado>=3;
+
+    // sequencial é por OP (1..quantidade da OP) — dá pra saber exatamente quais números faltam
+    let sequenciaisFaltantes = [];
+    let sequenciaisFaltantesTxt = '';
+    if(opQuantidade!=null && !completo && opQuantidade<=50000){
+      const faltando = [];
+      for(let n=1; n<=opQuantidade; n++){ if(!g.sequenciais.has(n)) faltando.push(n); }
+      sequenciaisFaltantes = faltando.map(n=>String(n).padStart(g.larguraSequencial,'0'));
+      sequenciaisFaltantesTxt = comprimirFaixas(faltando).map(f=>{
+        if(f.includes('-')){ const [a,b]=f.split('-'); return String(a).padStart(g.larguraSequencial,'0')+'-'+String(b).padStart(g.larguraSequencial,'0'); }
+        return String(f).padStart(g.larguraSequencial,'0');
+      }).join(', ');
+    }
+
+    let motivo = '';
+    if(!linhaEx && !elegivel){
+      const partes = [];
+      if(opQuantidade==null) partes.push('OP não encontrada na base de OPs');
+      else if(!completo){
+        let txt = `faltam ${(opQuantidade-g.total).toLocaleString('pt-BR')} peças bipar`;
+        if(sequenciaisFaltantesTxt) txt += ` (seq. ${sequenciaisFaltantesTxt.length>60 ? sequenciaisFaltantesTxt.slice(0,60)+'…' : sequenciaisFaltantesTxt})`;
+        partes.push(txt);
+      }
+      if(g.defeitosPendentes>0) partes.push(`${g.defeitosPendentes} defeito${g.defeitosPendentes>1?'s':''} aguardando conserto`);
+      motivo = partes.join(' · ');
+    }
+    linhas.push({
+      op: g.op,
+      linha,
+      unidade: g.unidade || (info ? null : null),
+      produtoDescricao: g.produtoDescricao || (info ? info.d : null),
+      total: g.total,
+      opQuantidade,
+      defeitosPendentes: g.defeitosPendentes,
+      isLinhaEx: linhaEx,
+      elegivel,
+      motivo,
+      ultimaMovimentacao: g.ultimaMovimentacao,
+      diasUteisParado,
+      justificativa,
+      precisaJustificar,
+      sequenciaisFaltantes,
+      sequenciaisFaltantesTxt,
+    });
+  });
+  linhas.sort((a,b)=> (b.elegivel - a.elegivel) || String(a.op).localeCompare(String(b.op)));
+  return linhas;
+}
+
+async function refreshCertificados(){
+  initCertSubnav();
+  certShowPage(certActivePage);
+
+  const linhas = await computeCertificadoElegibilidade();
+  const prontas = linhas.filter(l=>l.elegivel).length;
+  const linhaEx = linhas.filter(l=>l.isLinhaEx).length;
+  const pendentes = linhas.length - prontas - linhaEx;
+
+  document.getElementById('certDashCards').innerHTML = [
+    { num: linhas.length, lbl: 'OPs com bipagem' },
+    { num: prontas, lbl: 'Prontas para certificado' },
+    { num: linhaEx, lbl: 'Linha Ex (revisão manual)' },
+    { num: pendentes, lbl: 'Pendentes' },
+  ].map(c=>`<div class="card"><div class="num">${c.num}</div><div class="lbl">${c.lbl}</div></div>`).join('');
+
+  // OPs paradas há 3+ dias úteis, sem justificativa ainda
+  const precisamJustificar = linhas.filter(l=>l.precisaJustificar);
+  const justSection = document.getElementById('certJustificarSection');
+  if(precisamJustificar.length===0){
+    justSection.style.display = 'none';
+  } else {
+    justSection.style.display = 'block';
+    document.getElementById('certJustificarBody').innerHTML = precisamJustificar.map(l=>{
+      const faltamTxt = l.opQuantidade!=null ? (l.opQuantidade-l.total).toLocaleString('pt-BR') : '?';
+      const ultima = l.ultimaMovimentacao ? new Date(l.ultimaMovimentacao).toLocaleDateString('pt-BR') : '–';
+      return `<tr>
+        <td>${escapeHtml(l.op)}</td>
+        <td>${escapeHtml(l.linha||'–')}</td>
+        <td>${faltamTxt}</td>
+        <td style="font-family:var(--font-mono); font-size:11px; max-width:280px;">${escapeHtml(l.sequenciaisFaltantesTxt||'–')}</td>
+        <td>${ultima}</td>
+        <td>${l.diasUteisParado}</td>
+        <td><button class="btn-secondary justificar-btn" data-op="${escapeHtml(l.op)}" style="font-size:11px; padding:6px 10px;">Justificar</button></td>
+      </tr>`;
+    }).join('');
+    document.querySelectorAll('.justificar-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>abrirJustificarOp(btn.dataset.op));
+    });
+  }
+
+  const statusOpcoes = [
+    { id:'todas', label:'Todas ('+linhas.length+')' },
+    { id:'pendentes', label:'Pendentes ('+pendentes+')' },
+    { id:'prontas', label:'Prontas ('+prontas+')' },
+    { id:'linhaex', label:'🦺 Linha Ex ('+linhaEx+')' },
+  ];
+  const pillsEl = document.getElementById('certStatusPills');
+  pillsEl.innerHTML = statusOpcoes.map(o=>`<div class="pill${certStatusFiltro===o.id?' active':''}" data-status="${o.id}">${o.label}</div>`).join('');
+  pillsEl.querySelectorAll('.pill').forEach(p=>{
+    p.addEventListener('click', ()=>{ certStatusFiltro = p.dataset.status; refreshCertificados(); });
+  });
+
+  const linhasFiltradas = linhas.filter(l=>{
+    if(certStatusFiltro==='pendentes') return !l.elegivel && !l.isLinhaEx;
+    if(certStatusFiltro==='prontas') return l.elegivel;
+    if(certStatusFiltro==='linhaex') return l.isLinhaEx;
+    return true;
+  });
+
+  const tbody = document.getElementById('certEmitirBody');
+  const emptyEl = document.getElementById('certEmitirEmpty');
+  if(linhasFiltradas.length===0){
+    tbody.innerHTML = '';
+    emptyEl.style.display = 'block';
+    emptyEl.textContent = linhas.length===0 ? 'Nenhuma OP com bipagem registrada ainda.' : 'Nenhuma OP nesse status.';
+  } else {
+    emptyEl.style.display = 'none';
+    tbody.innerHTML = linhasFiltradas.map(l=>{
+      const qtdTxt = l.opQuantidade!=null ? `${l.total} / ${l.opQuantidade}` : `${l.total} / ?`;
+      let statusBadge;
+      if(l.isLinhaEx) statusBadge = '<span class="badge" style="background:var(--amber-dim); color:var(--amber);">🦺 Linha Ex</span>';
+      else if(l.elegivel) statusBadge = '<span class="badge badge-ok">Pronta</span>';
+      else if(l.justificativa) statusBadge = '<span class="badge" style="background:var(--amber-dim); color:var(--amber);">Justificada</span>';
+      else statusBadge = '<span class="badge badge-defeito">Pendente</span>';
+      let btn = '';
+      if(l.elegivel){
+        btn = '<button class="btn-secondary" disabled title="Emissão desativada por enquanto — vai depender da pesquisa por ficha técnica da OP">Emitir</button>';
+      } else if(l.justificativa){
+        btn = l.justificativa.termoSolicitado
+          ? '<span style="font-size:11px; color:var(--text-faint);">✓ Termo solicitado</span>'
+          : `<button class="btn-secondary termo-btn" data-jid="${l.justificativa.id}" style="font-size:11px; padding:6px 10px;">🖋 Solicitar Termo de Liberação</button>`;
+      }
+      const motivoTxt = l.justificativa ? ('Justificado: '+l.justificativa.motivo) : l.motivo;
+      return `<tr>
+        <td>${escapeHtml(l.op)}</td>
+        <td>${escapeHtml(l.linha||'–')}</td>
+        <td>${escapeHtml(l.unidade||'–')}</td>
+        <td>${escapeHtml(l.produtoDescricao||'–')}</td>
+        <td>${qtdTxt}</td>
+        <td>${l.defeitosPendentes}</td>
+        <td>${statusBadge}</td>
+        <td style="color:var(--text-faint); font-size:11.5px;">${escapeHtml(motivoTxt||'–')}</td>
+        <td>${btn}</td>
+      </tr>`;
+    }).join('');
+    document.querySelectorAll('.termo-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>solicitarTermoLiberacao(btn.dataset.jid));
+    });
+  }
+}
+
+/* Campo/gancho pra automação do TI: marca a solicitação do termo de liberação no registro
+   de justificativa. A abertura automática do termo em si (sistema já existente na empresa)
+   é responsabilidade do TI vincular a esse campo — aqui só expomos o dado/gatilho. */
+async function solicitarTermoLiberacao(justificativaId){
+  await updateRecord(justificativaId, {
+    termoSolicitado: true,
+    termoSolicitadoData: new Date().toISOString(),
+    termoSolicitadoOperador: currentUser,
+  });
+  showToast('Termo de liberação solicitado');
+  refreshCertificados();
+}
+
+/* ===================== JUSTIFICAR OP ===================== */
+let justificarOpAtual = null;
+
+function abrirJustificarOp(op){
+  justificarOpAtual = op;
+  document.getElementById('justificarOpLabel').textContent = op;
+  document.getElementById('justificarMotivo').value = '';
+  document.getElementById('justificarFormBox').style.display = 'block';
+  document.getElementById('justificarFormBox').scrollIntoView({behavior:'smooth', block:'center'});
+}
+document.getElementById('btnJustificarCancelar').addEventListener('click', ()=>{
+  justificarOpAtual = null;
+  document.getElementById('justificarFormBox').style.display = 'none';
+});
+document.getElementById('btnJustificarSalvar').addEventListener('click', async ()=>{
+  if(!justificarOpAtual) return;
+  const motivo = document.getElementById('justificarMotivo').value.trim();
+  if(!motivo){ showToast('Descreva o motivo — obrigatório'); return; }
+  await addRecord({
+    id: crypto.randomUUID(),
+    timestamp: new Date().toISOString(),
+    tipo: 'JUSTIFICATIVA_OP',
+    op: justificarOpAtual,
+    motivo,
+    operador: currentUser,
+    data: new Date().toISOString(),
+  });
+  showToast('Justificativa registrada — OP encerrada com pendência justificada');
+  justificarOpAtual = null;
+  document.getElementById('justificarFormBox').style.display = 'none';
+  refreshCertificados();
+});
+
+function ativarView(viewName, unidade){
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  const matchingTab = Array.from(document.querySelectorAll('.nav-tab')).find(t=>t.dataset.view===viewName && (!unidade || t.dataset.unidade===unidade));
+  if(matchingTab) matchingTab.classList.add('active');
+
+  document.getElementById('bipagemView').style.display = viewName==='bipagemView' ? 'block' : 'none';
+  document.getElementById('consertoView').style.display = viewName==='consertoView' ? 'block' : 'none';
+  document.getElementById('dashboardView').style.display = viewName==='dashboardView' ? 'block' : 'none';
+  document.getElementById('certificadosView').style.display = viewName==='certificadosView' ? 'block' : 'none';
+  document.getElementById('configuracoesView').style.display = viewName==='configuracoesView' ? 'block' : 'none';
+  document.getElementById('relatorioView').style.display = viewName==='relatorioView' ? 'block' : 'none';
+
+  if(unidade){
+    currentUnidadeLinha = unidade;
+    document.getElementById('sidebarUserMeta').textContent = unidade;
+    document.getElementById('headerSubtitle').textContent = `${unidade} · dados salvos apenas neste tablet · funciona sem internet`;
+  }
+
+  if(viewName==='bipagemView') refresh();
+  if(viewName==='dashboardView') refreshDashboard();
+  if(viewName==='consertoView') refreshConsertoFila();
+  if(viewName==='certificadosView') refreshCertificados();
+  if(viewName==='configuracoesView') renderOpDbStatus();
+  if(viewName==='relatorioView') initRelatorioMensal();
+  if(window.innerWidth <= 680) document.getElementById('appShell').classList.add('sidebar-collapsed');
+}
+
+document.querySelectorAll('.nav-tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    ativarView(tab.dataset.view, tab.dataset.unidade || null);
+  });
+});
+
+document.getElementById('linkConfiguracoes').addEventListener('click', (e)=>{
+  e.preventDefault();
+  ativarView('configuracoesView', null);
+});
+
+/* ===================== SIDEBAR: retrair/expandir e categoria "Indicadores" ===================== */
+document.getElementById('btnToggleSidebar').addEventListener('click', ()=>{
+  document.getElementById('appShell').classList.toggle('sidebar-collapsed');
+});
+document.getElementById('sidebarCategoryToggle').addEventListener('click', ()=>{
+  document.getElementById('sidebarCategoryToggle').classList.toggle('expanded');
+  document.getElementById('sidebarSubnav').classList.toggle('show');
+});
+
+/* ===================== IMPORTAR CSV DE OUTRAS CABINES ===================== */
+function parseCsvLine(line){
+  return parseCsvLineDelim(line, ';');
+}
+function parseCsvLineDelim(line, delim){
+  const out = [];
+  let cur = '';
+  let inQuotes = false;
+  for(let i=0;i<line.length;i++){
+    const ch = line[i];
+    if(inQuotes){
+      if(ch==='"'){
+        if(line[i+1]==='"'){ cur+='"'; i++; }
+        else inQuotes = false;
+      } else cur += ch;
+    } else {
+      if(ch==='"') inQuotes = true;
+      else if(ch===delim){ out.push(cur); cur=''; }
+      else cur += ch;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+function parsePtBrDateTime(s){
+  const m = /^(\d{2})\/(\d{2})\/(\d{4}),?\s+(\d{2}):(\d{2})(?::(\d{2}))?/.exec(s.trim());
+  if(!m) return null;
+  const [, d, mo, y, h, mi, se] = m;
+  const dt = new Date(+y, +mo-1, +d, +h, +mi, se?+se:0);
+  return isNaN(dt.getTime()) ? null : dt.toISOString();
+}
+
+function parseCsvText(text, sourceFile){
+  const clean = text.replace(/^\uFEFF/, '').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  const lines = clean.split('\n').filter(l=>l.trim()!=='');
+  if(lines.length<2) return [];
+  const header = parseCsvLine(lines[0]).map(h=>h.trim());
+  const idx = {};
+  header.forEach((h,i)=>idx[h]=i);
+  const required = ['Data/Hora','OP','Serial','Operador','Status','Defeito','Causa Raiz','Consertado'];
+  const missing = required.filter(r=>!(r in idx));
+  if(missing.length){
+    throw new Error('Arquivo não parece um CSV exportado deste app (colunas ausentes: '+missing.join(', ')+')');
+  }
+  /* 'Linha' e 'Unidade' são do formato novo; 'Cabine' é aceito por compatibilidade com CSVs antigos */
+  const out = [];
+  for(let i=1;i<lines.length;i++){
+    const cols = parseCsvLine(lines[i]);
+    const dtStr = cols[idx['Data/Hora']] || '';
+    const timestamp = parsePtBrDateTime(dtStr);
+    if(!timestamp) continue;
+    const consertadoRaw = (cols[idx['Consertado']]||'').trim();
+    const serial = cols[idx['Serial']] || null;
+    const parsedSerial = serial ? parseSerial(serial) : null;
+    out.push({
+      id: 'imp_' + sourceFile + '_' + i,
+      sourceFile,
+      timestamp,
+      linha: ('Linha' in idx) ? (cols[idx['Linha']] || null) : (cols[idx['Cabine']] || null),
+      unidade: ('Unidade' in idx) ? (cols[idx['Unidade']] || null) : (parsedSerial ? parsedSerial.unidade : null),
+      op: cols[idx['OP']] || null,
+      sequencial: ('Sequencial' in idx) ? (cols[idx['Sequencial']] || null) : (parsedSerial ? parsedSerial.sequencial : null),
+      produtoCodigo: ('Cód. Produto' in idx) ? (cols[idx['Cód. Produto']] || null) : null,
+      produtoDescricao: ('Descrição Produto' in idx) ? (cols[idx['Descrição Produto']] || null) : null,
+      produtoFamilia: ('Família Produto' in idx) ? (cols[idx['Família Produto']] || null) : null,
+      opQuantidade: ('Qtd. OP' in idx) && cols[idx['Qtd. OP']] ? Number(cols[idx['Qtd. OP']]) : null,
+      opStatus: ('Status OP' in idx) ? (cols[idx['Status OP']] || null) : null,
+      serial,
+      operador: cols[idx['Operador']] || null,
+      tipo: (cols[idx['Status']]||'').trim() || 'OK',
+      defeito: cols[idx['Defeito']] || null,
+      causa: cols[idx['Causa Raiz']] || null,
+      consertado: consertadoRaw==='Sim' ? true : consertadoRaw==='Não' ? false : null,
+      statusConserto: ('Status Conserto' in idx) ? (cols[idx['Status Conserto']] || null) : null,
+      encaminhadoParaUnidade: ('Encaminhado Para Unidade' in idx) ? (cols[idx['Encaminhado Para Unidade']] || null) : null,
+      consertoOperador: ('Operador Conserto' in idx) ? (cols[idx['Operador Conserto']] || null) : null,
+      consertoTimestamp: ('Data/Hora Conserto' in idx) ? (parsePtBrDateTime(cols[idx['Data/Hora Conserto']]) || null) : null,
+      tempoConsertoSegundos: ('Tempo Conserto (s)' in idx) && cols[idx['Tempo Conserto (s)']] ? Number(cols[idx['Tempo Conserto (s)']]) : null,
+      componenteCulpadoSerial: ('Serial Componente Culpado' in idx) ? (cols[idx['Serial Componente Culpado']] || null) : null,
+      componenteCulpadoUnidade: ('Unidade Componente Culpado' in idx) ? (cols[idx['Unidade Componente Culpado']] || null) : null,
+      requisicaoMotivo: ('Requisição Motivo' in idx) ? (cols[idx['Requisição Motivo']] || null) : null,
+      requisicaoDriverSerial: ('Requisição Driver Serial' in idx) ? (cols[idx['Requisição Driver Serial']] || null) : null,
+      requisicaoData: ('Requisição Data' in idx) ? (parsePtBrDateTime(cols[idx['Requisição Data']]) || null) : null,
+      requisicaoOperador: ('Requisição Operador' in idx) ? (cols[idx['Requisição Operador']] || null) : null,
+    });
+  }
+  return out;
+}
+
+document.getElementById('btnImportCsv').addEventListener('click', ()=>{
+  document.getElementById('importCsvInput').click();
+});
+
+document.getElementById('importCsvInput').addEventListener('change', async (e)=>{
+  const files = Array.from(e.target.files || []);
+  for(const file of files){
+    try{
+      const text = await file.text();
+      const records = parseCsvText(text, file.name);
+      if(records.length===0){ showToast(`${file.name}: nenhum registro válido encontrado`); continue; }
+      await addImportedRecords(records);
+      const atualizados = await cruzarConsertoComponenteExterno(records);
+      showToast(`${file.name}: ${records.length} registros importados`+(atualizados ? ` · ${atualizados} peças da Iluminação atualizadas com o conserto do componente` : ''));
+    } catch(err){
+      showToast(`Erro ao importar ${file.name}: ${err.message}`);
+    }
+  }
+  e.target.value = '';
+  refreshDashboard();
+});
+
+/* Cruza um conserto de componente externo concluído com o registro original que apontou aquele
+   serial como culpado, atualizando-o. Funciona tanto no mesmo banco local (mesmo computador/tablet
+   simulando as duas unidades) quanto depois de importar o CSV de outro tablet. */
+async function cruzarComponenteExternoUm(componenteRecord){
+  if(!componenteRecord.serial) return false;
+  const locais = (await getAllRecords()).sort((a,b)=>b.timestamp.localeCompare(a.timestamp));
+  const alvo = locais.find(r=>r.componenteCulpadoSerial===componenteRecord.serial);
+  if(!alvo) return false;
+  await updateRecord(alvo.id, {
+    componenteConsertoStatus: componenteRecord.consertado===true ? 'Consertado' : componenteRecord.consertado===false ? 'Descartado' : null,
+    componenteConsertoCausa: componenteRecord.causa || null,
+    componenteConsertoData: componenteRecord.consertoTimestamp || null,
+    componenteConsertoOperador: componenteRecord.consertoOperador || null,
+  });
+  return true;
+}
+
+/* Quando este tablet é da Iluminação e o CSV importado traz conserto de componente externo
+   (feito na Eletrônica), atualiza a peça original daqui que apontou aquele driver como culpado —
+   é assim que "o apontamento de conserto atualiza o registro da peça no relatório da iluminação"
+   quando as duas unidades usam tablets separados. */
+async function cruzarConsertoComponenteExterno(recordsImportados){
+  if(currentUnidadeLinha !== 'Iluminação') return 0;
+  const consertosExternos = recordsImportados.filter(r=>r.tipo==='COMPONENTE_EXTERNO' && r.statusConserto==='concluido' && r.serial);
+  if(consertosExternos.length===0) return 0;
+  let atualizados = 0;
+  for(const ext of consertosExternos){
+    if(await cruzarComponenteExternoUm(ext)) atualizados++;
+  }
+  return atualizados;
+}
+
+async function renderImportedChips(){
+  const imported = await getAllImportedRecords();
+  const bySource = new Map();
+  imported.forEach(r=>{
+    bySource.set(r.sourceFile, (bySource.get(r.sourceFile)||0)+1);
+  });
+  const container = document.getElementById('importedChips');
+  if(bySource.size===0){ container.innerHTML=''; return; }
+  container.innerHTML = Array.from(bySource.entries()).map(([source,count])=>`
+    <div class="chip">
+      <span>${escapeHtml(source)} · ${count}</span>
+      <button data-source="${escapeHtml(source)}" title="Remover">✕</button>
+    </div>
+  `).join('');
+  container.querySelectorAll('button[data-source]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      await removeImportedBySource(btn.dataset.source);
+      showToast('Importação removida');
+      refreshDashboard();
+    });
+  });
+}
+
+/* ===================== DASHBOARD GD ===================== */
+let dashDateFrom = null; // 'YYYY-MM-DD' ou null (usa a data mínima disponível)
+let dashDateTo = null;   // 'YYYY-MM-DD' ou null (usa a data máxima disponível)
+let dashActiveUnidade = 'todas';
+let dashActiveLinha = 'todas';
+
+/* Dias úteis (seg-sex) desde a última movimentação, sem contar o próprio dia da movimentação */
+function businessDaysSince(isoTimestamp){
+  if(!isoTimestamp) return 0;
+  const start = new Date(isoTimestamp);
+  start.setHours(0,0,0,0);
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  let count = 0;
+  const cur = new Date(start);
+  cur.setDate(cur.getDate()+1);
+  while(cur <= hoje){
+    const dow = cur.getDay();
+    if(dow!==0 && dow!==6) count++;
+    cur.setDate(cur.getDate()+1);
+  }
+  return count;
+}
+
+function dateKey(iso){
+  const d = new Date(iso);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+document.getElementById('dashAtalhoHoje').addEventListener('click', ()=>{
+  const hoje = dateKey(new Date().toISOString());
+  dashDateFrom = hoje;
+  dashDateTo = hoje;
+  refreshDashboard();
+});
+document.getElementById('dashAtalhoMes').addEventListener('click', ()=>{
+  const agora = new Date();
+  dashDateFrom = agora.getFullYear()+'-'+String(agora.getMonth()+1).padStart(2,'0')+'-01';
+  dashDateTo = dateKey(agora.toISOString());
+  refreshDashboard();
+});
+function dateLabel(key){
+  const [y,m,d] = key.split('-');
+  return d+'/'+m;
+}
+
+async function getConsolidatedRecords(){
+  const local = await getAllRecords();
+  const imported = await getAllImportedRecords();
+  const merged = new Map();
+  [...local, ...imported].forEach(r=>{
+    const tsSeconds = r.timestamp.slice(0,19); // trunca para segundos — CSV não guarda milissegundos
+    const key = `${r.linha}|${r.serial}|${tsSeconds}`;
+    merged.set(key, r);
+  });
+  return Array.from(merged.values());
+}
+
+async function refreshDashboard(){
+  await renderImportedChips();
+  const all = (await getConsolidatedRecords()).filter(r=>r.tipo==='OK' || r.tipo==='DEFEITO');
+
+  const unidadePillsContainer = document.getElementById('dashUnidadePills');
+  const unidades = ['todas', ...UNIDADES];
+  unidadePillsContainer.innerHTML = unidades.map(u=>{
+    const label = u==='todas' ? 'Todas as unidades' : u;
+    return `<div class="pill${dashActiveUnidade===u?' active':''}" data-unidade="${escapeHtml(u)}">${escapeHtml(label)}</div>`;
+  }).join('');
+  unidadePillsContainer.querySelectorAll('.pill').forEach(p=>{
+    p.addEventListener('click', ()=>{
+      dashActiveUnidade = p.dataset.unidade;
+      dashActiveLinha = 'todas';
+      refreshDashboard();
+    });
+  });
+
+  const unidadeFiltered = dashActiveUnidade==='todas' ? all : all.filter(r=>r.unidade===dashActiveUnidade);
+
+  const linhasDisponiveis = Array.from(new Set(unidadeFiltered.map(r=>r.linha).filter(Boolean))).sort();
+  if(dashActiveLinha!=='todas' && !linhasDisponiveis.includes(dashActiveLinha)) dashActiveLinha = 'todas';
+  const linhaPillsContainer = document.getElementById('dashLinhaPills');
+  linhaPillsContainer.innerHTML = ['<div class="pill'+(dashActiveLinha==='todas'?' active':'')+'" data-linha="todas">Todas as linhas</div>']
+    .concat(linhasDisponiveis.map(l=>`<div class="pill${dashActiveLinha===l?' active':''}" data-linha="${escapeHtml(l)}">${escapeHtml(l)}</div>`))
+    .join('');
+  linhaPillsContainer.querySelectorAll('.pill').forEach(p=>{
+    p.addEventListener('click', ()=>{
+      dashActiveLinha = p.dataset.linha;
+      refreshDashboard();
+    });
+  });
+  const linhaFiltered = dashActiveLinha==='todas' ? unidadeFiltered : unidadeFiltered.filter(r=>r.linha===dashActiveLinha);
+
+  const dayKeys = Array.from(new Set(linhaFiltered.map(r=>dateKey(r.timestamp)))).sort();
+  const minDate = dayKeys[0] || null;
+  const maxDate = dayKeys[dayKeys.length-1] || null;
+  if(!dashDateFrom || !dashDateTo){ dashDateFrom = minDate; dashDateTo = maxDate; }
+  if(minDate && dashDateFrom && dashDateFrom < minDate) dashDateFrom = minDate;
+  if(maxDate && dashDateTo && dashDateTo > maxDate) dashDateTo = maxDate;
+
+  const fromInput = document.getElementById('dashDateFrom');
+  const toInput = document.getElementById('dashDateTo');
+  fromInput.value = dashDateFrom || '';
+  toInput.value = dashDateTo || '';
+  fromInput.min = minDate || ''; fromInput.max = maxDate || '';
+  toInput.min = minDate || ''; toInput.max = maxDate || '';
+  fromInput.onchange = ()=>{
+    dashDateFrom = fromInput.value || minDate;
+    if(dashDateTo && dashDateFrom > dashDateTo) dashDateTo = dashDateFrom;
+    refreshDashboard();
+  };
+  toInput.onchange = ()=>{
+    dashDateTo = toInput.value || maxDate;
+    if(dashDateFrom && dashDateTo < dashDateFrom) dashDateFrom = dashDateTo;
+    refreshDashboard();
+  };
+
+  const rows = linhaFiltered.filter(r=>{
+    const dk = dateKey(r.timestamp);
+    return (!dashDateFrom || dk>=dashDateFrom) && (!dashDateTo || dk<=dashDateTo);
+  });
+  const dayKeysInRange = dayKeys.filter(k=> (!dashDateFrom || k>=dashDateFrom) && (!dashDateTo || k<=dashDateTo));
+
+  const total = rows.length;
+  const defeitos = rows.filter(r=>r.tipo==='DEFEITO').length;
+  const consertados = rows.filter(r=>r.tipo==='DEFEITO' && r.consertado===true).length;
+  const taxa = total>0 ? (defeitos/total)*100 : 0;
+  const taxaOk = taxa <= META_TAXA_DEFEITO;
+
+  document.getElementById('dashHero').style.setProperty('--card-accent', taxaOk ? 'var(--teal)' : 'var(--red)');
+  document.getElementById('dashHero').innerHTML = `
+    <div class="taxa-num" style="color:${taxaOk?'var(--teal)':'var(--red)'}">${taxa.toFixed(2).replace('.',',')}%</div>
+    <div class="taxa-lbl">Taxa de defeito · meta ${String(META_TAXA_DEFEITO).replace('.',',')}%</div>
+    <div class="taxa-status" style="background:${taxaOk?'var(--teal-dim)':'var(--red-dim)'}; color:${taxaOk?'var(--teal)':'var(--red)'}">
+      ${taxaOk ? '✓ Dentro da meta' : '⚠ Acima da meta'}
+    </div>
+  `;
+
+  document.getElementById('dashCards').innerHTML = [
+    { num: total, lbl: 'Peças bipadas' },
+    { num: defeitos, lbl: 'Defeitos' },
+    { num: consertados, lbl: 'Consertados' },
+  ].map(c=>`<div class="card"><div class="num">${c.num}</div><div class="lbl">${c.lbl}</div></div>`).join('');
+
+  // Conserto — tempo dedicado e eficácia (só consertos concluídos pelo módulo de Conserto)
+  const consertosFeitos = rows.filter(r=>r.statusConserto==='concluido');
+  const encaminhadosOutraArea = rows.filter(r=>r.statusConserto==='encaminhado').length;
+  const consertoSection = document.getElementById('dashConsertoSection');
+  if(consertosFeitos.length>0 || encaminhadosOutraArea>0){
+    consertoSection.style.display = 'block';
+    const comTempo = consertosFeitos.filter(r=>r.tempoConsertoSegundos!=null);
+    const tempoMedioSeg = comTempo.length>0 ? comTempo.reduce((s,r)=>s+r.tempoConsertoSegundos,0)/comTempo.length : null;
+    const tempoMedioTxt = tempoMedioSeg!=null
+      ? `${String(Math.floor(tempoMedioSeg/60)).padStart(2,'0')}:${String(Math.round(tempoMedioSeg%60)).padStart(2,'0')}`
+      : '–';
+    const eficazes = consertosFeitos.filter(r=>r.consertado===true).length;
+    const eficaciaTxt = consertosFeitos.length>0 ? ((eficazes/consertosFeitos.length)*100).toFixed(1).replace('.',',')+'%' : '–';
+    document.getElementById('dashConsertoCards').innerHTML = [
+      { num: consertosFeitos.length, lbl: 'Consertos concluídos' },
+      { num: tempoMedioTxt, lbl: 'Tempo médio (mm:ss)' },
+      { num: eficaciaTxt, lbl: 'Eficácia (consertado com sucesso)' },
+      { num: encaminhadosOutraArea, lbl: 'Encaminhados p/ outra área' },
+    ].map(c=>`<div class="card"><div class="num">${c.num}</div><div class="lbl">${c.lbl}</div></div>`).join('');
+  } else {
+    consertoSection.style.display = 'none';
+  }
+
+  // Por unidade
+  const byUnidade = new Map();
+  rows.forEach(r=>{
+    const u = r.unidade || 'S/ unidade';
+    if(!byUnidade.has(u)) byUnidade.set(u, {produzido:0, defeitos:0});
+    const g = byUnidade.get(u);
+    g.produzido++;
+    if(r.tipo==='DEFEITO') g.defeitos++;
+  });
+  const unidadeRows = Array.from(byUnidade.entries()).map(([unidade,g])=>({
+    unidade, produzido:g.produzido, defeitos:g.defeitos,
+    taxa: g.produzido>0 ? (g.defeitos/g.produzido)*100 : 0,
+  })).sort((a,b)=>b.taxa-a.taxa);
+
+  document.getElementById('dashUnidadeBody').innerHTML = unidadeRows.length ? unidadeRows.map(u=>{
+    const ok = u.taxa <= META_TAXA_DEFEITO;
+    return `<tr>
+      <td>${escapeHtml(u.unidade)}</td>
+      <td>${u.produzido}</td>
+      <td>${u.defeitos}</td>
+      <td><span class="badge ${ok?'badge-ok':'badge-defeito'}">${u.taxa.toFixed(2).replace('.',',')}%</span></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="4" style="color:var(--text-faint);">Sem dados no período selecionado</td></tr>';
+
+  // Por linha
+  const byLinha = new Map();
+  rows.forEach(r=>{
+    const l = r.linha || 'S/ linha';
+    const key = l + '|' + (r.unidade||'');
+    if(!byLinha.has(key)) byLinha.set(key, {linha:l, unidade:r.unidade||'', produzido:0, defeitos:0});
+    const g = byLinha.get(key);
+    g.produzido++;
+    if(r.tipo==='DEFEITO') g.defeitos++;
+  });
+  const linhaRows = Array.from(byLinha.values()).map(g=>({
+    ...g, taxa: g.produzido>0 ? (g.defeitos/g.produzido)*100 : 0,
+  })).sort((a,b)=>b.taxa-a.taxa);
+
+  document.getElementById('dashLinhaBody').innerHTML = linhaRows.length ? linhaRows.map(l=>{
+    const ok = l.taxa <= META_TAXA_DEFEITO;
+    return `<tr>
+      <td>${escapeHtml(l.linha)}</td>
+      <td>${escapeHtml(l.unidade || '–')}</td>
+      <td>${l.produzido}</td>
+      <td>${l.defeitos}</td>
+      <td><span class="badge ${ok?'badge-ok':'badge-defeito'}">${l.taxa.toFixed(2).replace('.',',')}%</span></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="5" style="color:var(--text-faint);">Sem dados no período selecionado</td></tr>';
+
+  // Por tipo de produto (requer base de OPs importada)
+  const byProduto = new Map();
+  rows.forEach(r=>{
+    const p = r.produtoDescricao || (r.produtoCodigo ? 'Cód. '+r.produtoCodigo : 'Não identificado (importe a base de OPs)');
+    if(!byProduto.has(p)) byProduto.set(p, {produzido:0, defeitos:0});
+    const g = byProduto.get(p);
+    g.produzido++;
+    if(r.tipo==='DEFEITO') g.defeitos++;
+  });
+  const produtoRows = Array.from(byProduto.entries()).map(([produto,g])=>({
+    produto, produzido:g.produzido, defeitos:g.defeitos,
+    taxa: g.produzido>0 ? (g.defeitos/g.produzido)*100 : 0,
+  })).sort((a,b)=>b.produzido-a.produzido).slice(0,15);
+
+  document.getElementById('dashProdutoBody').innerHTML = produtoRows.length ? produtoRows.map(p=>{
+    const ok = p.taxa <= META_TAXA_DEFEITO;
+    return `<tr>
+      <td>${escapeHtml(p.produto)}</td>
+      <td>${p.produzido}</td>
+      <td>${p.defeitos}</td>
+      <td><span class="badge ${ok?'badge-ok':'badge-defeito'}">${p.taxa.toFixed(2).replace('.',',')}%</span></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="4" style="color:var(--text-faint);">Sem dados no período selecionado</td></tr>';
+
+  // Principais causas
+  const byDefeito = new Map();
+  rows.filter(r=>r.tipo==='DEFEITO').forEach(r=>{
+    const d = r.defeito || 'NÃO INFORMADO';
+    byDefeito.set(d, (byDefeito.get(d)||0)+1);
+  });
+  const causasRows = Array.from(byDefeito.entries()).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  document.getElementById('dashCausasBody').innerHTML = causasRows.length ? causasRows.map(([tipo,count])=>{
+    const pct = defeitos>0 ? (count/defeitos)*100 : 0;
+    return `<tr><td>${escapeHtml(tipo)}</td><td>${count}</td><td>${pct.toFixed(1).replace('.',',')}%</td></tr>`;
+  }).join('') : '<tr><td colspan="3" style="color:var(--text-faint);">Sem defeitos no período selecionado</td></tr>';
+
+  // Componentes de outra unidade apontados como causa (rastreabilidade cruzada, via conserto)
+  const reincidenciaPorSerial = new Map();
+  all.forEach(r=>{
+    if(!r.componenteCulpadoSerial) return;
+    reincidenciaPorSerial.set(r.componenteCulpadoSerial, (reincidenciaPorSerial.get(r.componenteCulpadoSerial)||0)+1);
+  });
+
+  const culpados = all.filter(r=>{
+    if(!r.componenteCulpadoSerial) return false;
+    const dk = dateKey(r.consertoTimestamp || r.timestamp);
+    const noIntervalo = (!dashDateFrom || dk>=dashDateFrom) && (!dashDateTo || dk<=dashDateTo);
+    const bateUnidade = dashActiveUnidade==='todas' || r.componenteCulpadoUnidade===dashActiveUnidade;
+    return noIntervalo && bateUnidade;
+  }).sort((a,b)=>(b.consertoTimestamp||b.timestamp).localeCompare(a.consertoTimestamp||a.timestamp));
+
+  const culpadoSection = document.getElementById('dashCulpadoSection');
+  if(culpados.length>0){
+    culpadoSection.style.display = 'block';
+    document.getElementById('dashCulpadoBody').innerHTML = culpados.map(r=>{
+      const dt = new Date(r.consertoTimestamp || r.timestamp).toLocaleString('pt-BR');
+      const totalOcorrencias = reincidenciaPorSerial.get(r.componenteCulpadoSerial) || 1;
+      const reincidenteTag = totalOcorrencias>=2
+        ? ` <span class="badge badge-defeito">reincidente · ${totalOcorrencias}x</span>`
+        : '';
+      return `<tr>
+        <td style="font-family:var(--font-mono); font-size:11px;">${escapeHtml(r.componenteCulpadoSerial)}${reincidenteTag}</td>
+        <td>${escapeHtml(r.componenteCulpadoUnidade||'–')}</td>
+        <td>OP ${escapeHtml(r.op||'–')} · Linha ${escapeHtml(r.linha||'–')} (${escapeHtml(r.unidade||'–')})</td>
+        <td>${escapeHtml(r.causa||'–')}</td>
+        <td>${dt}</td>
+      </tr>`;
+    }).join('');
+  } else {
+    culpadoSection.style.display = 'none';
+  }
+
+  // Tendência (dia a dia dentro do intervalo selecionado)
+  const trendSection = document.getElementById('dashTrendSection');
+  if(dayKeysInRange.length>1){
+    trendSection.style.display = 'block';
+    const maxTaxa = Math.max(META_TAXA_DEFEITO*2, ...dayKeysInRange.map(k=>{
+      const dayRows = linhaFiltered.filter(r=>dateKey(r.timestamp)===k);
+      const dDef = dayRows.filter(r=>r.tipo==='DEFEITO').length;
+      return dayRows.length>0 ? (dDef/dayRows.length)*100 : 0;
+    }));
+    document.getElementById('dashTrend').innerHTML = dayKeysInRange.map(k=>{
+      const dayRows = linhaFiltered.filter(r=>dateKey(r.timestamp)===k);
+      const dDef = dayRows.filter(r=>r.tipo==='DEFEITO').length;
+      const dTaxa = dayRows.length>0 ? (dDef/dayRows.length)*100 : 0;
+      const ok = dTaxa <= META_TAXA_DEFEITO;
+      const widthPct = Math.min(100, (dTaxa/maxTaxa)*100);
+      const metaPct = Math.min(100, (META_TAXA_DEFEITO/maxTaxa)*100);
+      return `<div class="trend-row">
+        <div class="trend-day">${dateLabel(k)}</div>
+        <div class="trend-bar-track">
+          <div class="trend-bar-fill" style="width:${widthPct}%; background:${ok?'var(--teal)':'var(--red)'}"></div>
+          <div class="trend-meta-line" style="left:${metaPct}%"></div>
+        </div>
+        <div class="trend-val">${dTaxa.toFixed(1).replace('.',',')}%</div>
+      </div>`;
+    }).join('');
+  } else {
+    trendSection.style.display = 'none';
+  }
+}
+
+/* ===================== RELATÓRIO MENSAL (donuts + resumo geral) ===================== */
+const MESES_NOMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const CORES_DEFEITO = ['#D32F2F','#F57C00','#FBC02D','#7CB342','#00897B','#1E88E5','#5E35B1','#D81B60','#6D4C41','#546E7A','#C0CA33','#00ACC1'];
+
+function statsDe(rows){
+  const produzido = rows.length;
+  const defeitos = rows.filter(r=>r.tipo==='DEFEITO').length;
+  const taxa = produzido>0 ? (defeitos/produzido)*100 : 0;
+  return { produzido, defeitos, taxa };
+}
+
+/* Monta o gradiente cônico (CSS) de um donut a partir de uma lista de {pct, color}.
+   O restante (peças aprovadas) fica verde — mesmo padrão da legenda de "conforme" do Power BI —
+   em vez de cinza neutro, exceto quando os segmentos já cobrem o total (ex: detalhamento por tipo). */
+function donutGradient(segments, corRestante){
+  let acc = 0;
+  const stops = segments.map(s=>{
+    const start = acc; acc += s.pct;
+    return `${s.color} ${start.toFixed(2)}% ${acc.toFixed(2)}%`;
+  });
+  if(acc < 100) stops.push(`${corRestante || 'var(--teal)'} ${acc.toFixed(2)}% 100%`);
+  return stops.join(', ');
+}
+function renderDonutHTML(segments, numLabel, subLabel, corRestante){
+  const grad = donutGradient(segments, corRestante);
+  return `<div class="donut" style="background:conic-gradient(${grad});">
+    <div class="donut-hole"><div class="num">${numLabel}</div><div style="font-size:10px; color:var(--text-faint);">${subLabel||''}</div></div>
+  </div>`;
+}
+
+async function initRelatorioMensal(){
+  const mesSelect = document.getElementById('relatorioMes');
+  if(!mesSelect.options.length){
+    const hoje = new Date();
+    mesSelect.innerHTML = MESES_NOMES.map((nome,i)=>`<option value="${i+1}"${i===hoje.getMonth()?' selected':''}>${nome}</option>`).join('');
+    document.getElementById('relatorioAno').value = hoje.getFullYear();
+  }
+  const all = (await getConsolidatedRecords()).filter(r=>r.unidade==='Iluminação' && (r.tipo==='OK' || r.tipo==='DEFEITO'));
+  const linhasDisponiveis = Array.from(new Set(all.map(r=>r.linha || 'S/ linha'))).sort();
+  const container = document.getElementById('relatorioLinhasChecks');
+  const jaMarcadas = new Set(Array.from(container.querySelectorAll('input:checked')).map(el=>el.value));
+  const primeiraVez = container.children.length===0;
+  container.innerHTML = linhasDisponiveis.map(l=>`<label style="display:flex; align-items:center; gap:5px; font-size:12.5px; cursor:pointer;"><input type="checkbox" value="${escapeHtml(l)}" class="relatorio-linha-check" ${(primeiraVez || jaMarcadas.has(l)) ? 'checked' : ''}> ${escapeHtml(l)}</label>`).join('');
+}
+
+document.getElementById('btnRelatorioLinhasTodas').addEventListener('click', ()=>{
+  document.querySelectorAll('.relatorio-linha-check').forEach(c=>c.checked=true);
+});
+document.getElementById('btnRelatorioLinhasNenhuma').addEventListener('click', ()=>{
+  document.querySelectorAll('.relatorio-linha-check').forEach(c=>c.checked=false);
+});
+
+document.getElementById('btnGerarRelatorio').addEventListener('click', gerarRelatorioMensal);
+document.getElementById('btnImprimirRelatorio').addEventListener('click', ()=>window.print());
+
+let relatorioCharts = []; // specs dos gráficos gerados nesta rodada, pra "copiar como imagem"
+
+async function gerarRelatorioMensal(){
+  const mes = parseInt(document.getElementById('relatorioMes').value,10);
+  const ano = parseInt(document.getElementById('relatorioAno').value,10);
+  const mesKey = ano+'-'+String(mes).padStart(2,'0');
+  const linhasSelecionadas = new Set(Array.from(document.querySelectorAll('.relatorio-linha-check:checked')).map(el=>el.value));
+
+  const conteudo = document.getElementById('relatorioConteudo');
+  if(linhasSelecionadas.size===0){
+    conteudo.innerHTML = `<div class="scan-box"><div class="empty-state">Selecione ao menos uma linha pra gerar o relatório.</div></div>`;
+    document.getElementById('btnImprimirRelatorio').style.display = 'none';
+    return;
+  }
+
+  const all = (await getConsolidatedRecords()).filter(r=>{
+    if(r.unidade!=='Iluminação') return false;
+    if(r.tipo!=='OK' && r.tipo!=='DEFEITO') return false;
+    if(!dateKey(r.timestamp).startsWith(mesKey)) return false;
+    return linhasSelecionadas.has(r.linha || 'S/ linha');
+  });
+
+  relatorioCharts = [];
+  if(all.length===0){
+    conteudo.innerHTML = `<div class="scan-box"><div class="empty-state">Sem dados de Iluminação em ${MESES_NOMES[mes-1]}/${ano} pras linhas selecionadas.</div></div>`;
+    document.getElementById('btnImprimirRelatorio').style.display = 'none';
+    return;
+  }
+
+  const geral = statsDe(all);
+
+  // agrupamento por linha
+  const porLinha = new Map();
+  all.forEach(r=>{
+    const l = r.linha || 'S/ linha';
+    if(!porLinha.has(l)) porLinha.set(l, []);
+    porLinha.get(l).push(r);
+  });
+  const linhasOrdenadas = Array.from(porLinha.entries())
+    .map(([linha, rows])=>({ linha, rows, ...statsDe(rows) }))
+    .sort((a,b)=>b.taxa-a.taxa);
+
+  function botaoCopiar(idx){
+    return `<button class="btn-secondary no-print btn-copiar-grafico" data-chart-idx="${idx}" style="font-size:11px; padding:6px 10px; margin-left:auto;">📋 Copiar imagem</button>`;
+  }
+
+  let html = '';
+
+  // GERAL TOTAL
+  const geralTaxaPct = geral.produzido ? (geral.defeitos/geral.produzido)*100 : 0;
+  const geralLegend = [
+    { label: `${(geral.produzido-geral.defeitos).toLocaleString('pt-BR')} conformes (${(100-geral.taxa).toFixed(2).replace('.',',')}%)`, color: 'var(--teal)' },
+    { label: `${geral.defeitos.toLocaleString('pt-BR')} defeitos (${geral.taxa.toFixed(2).replace('.',',')}%)`, color: 'var(--red)' },
+  ];
+  relatorioCharts.push({ tipo:'donut', titulo:`Geral Total — ${MESES_NOMES[mes-1]} ${ano}`, segments:[{pct:geralTaxaPct, color:'var(--red)'}], corRestante:'var(--teal)', centerLabel: geral.taxa.toFixed(2).replace('.',',')+'%', legend: geralLegend });
+  html += `<div class="dash-section relatorio-page">
+    <div style="display:flex; align-items:center; gap:10px;"><h3 style="margin:0;">Geral Total — ${MESES_NOMES[mes-1]} ${ano}</h3>${botaoCopiar(relatorioCharts.length-1)}</div>
+    <div class="donut-row">
+      ${renderDonutHTML([{pct: geralTaxaPct, color:'var(--red)'}], geral.taxa.toFixed(2).replace('.',',')+'%', 'defeito')}
+      <div class="donut-legend">${geralLegend.map(it=>`<div class="item"><span class="sw" style="background:${it.color};"></span>${it.label}</div>`).join('')}</div>
+    </div>
+    <div class="relatorio-meta-linha">Meta: ${String(META_TAXA_DEFEITO).replace('.',',')}% · Percentual de defeitos: <b style="color:${geral.taxa<=META_TAXA_DEFEITO?'var(--verde-escuro)':'var(--red)'}">${geral.taxa.toFixed(2).replace('.',',')}%</b> · Total produzido: ${geral.produzido.toLocaleString('pt-BR')}</div>
+  </div>`;
+
+  // POR LINHA (donut produzido x defeito + donut de tipos de defeito, se houver)
+  html += `<div class="dash-section relatorio-page"><h3>Por linha</h3>`;
+  linhasOrdenadas.forEach(l=>{
+    const linhaLegend = [
+      { label: `${(l.produzido-l.defeitos).toLocaleString('pt-BR')} conformes (${(100-l.taxa).toFixed(2).replace('.',',')}%)`, color: 'var(--teal)' },
+      { label: `${l.defeitos.toLocaleString('pt-BR')} defeitos (${l.taxa.toFixed(2).replace('.',',')}%)`, color: 'var(--red)' },
+    ];
+    relatorioCharts.push({ tipo:'donut', titulo:`${l.linha} — Produzido x Defeito`, segments:[{pct:l.taxa, color:'var(--red)'}], corRestante:'var(--teal)', centerLabel: l.taxa.toFixed(2).replace('.',',')+'%', legend: linhaLegend });
+    const idxLinha = relatorioCharts.length-1;
+    html += `<div class="relatorio-familia">
+      <div style="display:flex; align-items:center; gap:10px;"><h4 style="margin:0;">${escapeHtml(l.linha)}</h4>${botaoCopiar(idxLinha)}</div>
+      <div class="donut-row">
+        ${renderDonutHTML([{pct: l.taxa, color:'var(--red)'}], l.taxa.toFixed(2).replace('.',',')+'%', 'defeito')}`;
+    if(l.defeitos>0){
+      const porTipo = new Map();
+      l.rows.filter(r=>r.tipo==='DEFEITO').forEach(r=>{
+        const tipo = r.defeito || 'OUTROS';
+        porTipo.set(tipo, (porTipo.get(tipo)||0)+1);
+      });
+      const tipos = Array.from(porTipo.entries()).sort((a,b)=>b[1]-a[1]);
+      const segs = tipos.map(([tipo,qtd],i)=>({ pct:(qtd/l.defeitos)*100, color: CORES_DEFEITO[i%CORES_DEFEITO.length], tipo, qtd }));
+      const tipoLegend = segs.map(s=>({ label: `${escapeHtml(s.tipo)} — ${s.qtd} (${s.pct.toFixed(1).replace('.',',')}%)`, color: s.color }));
+      relatorioCharts.push({ tipo:'donut', titulo:`${l.linha} — Detalhamento por tipo de defeito`, segments: segs.map(s=>({pct:s.pct,color:s.color})), corRestante:'var(--teal)', centerLabel: String(l.defeitos), legend: tipoLegend });
+      html += renderDonutHTML(segs.map(s=>({pct:s.pct,color:s.color})), l.defeitos, 'defeitos');
+      html += `<div class="donut-legend">${tipoLegend.map(it=>`<div class="item"><span class="sw" style="background:${it.color};"></span>${it.label}</div>`).join('')}${botaoCopiar(relatorioCharts.length-1)}</div>`;
+    }
+    html += `</div>
+      <div class="relatorio-meta-linha">Meta: ${String(META_TAXA_DEFEITO).replace('.',',')}% · Percentual de defeitos: <b style="color:${l.taxa<=META_TAXA_DEFEITO?'var(--verde-escuro)':'var(--red)'}">${l.taxa.toFixed(2).replace('.',',')}%</b> · Produzido: ${l.produzido.toLocaleString('pt-BR')}</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  // RESUMO GERAL (gráfico de barras)
+  const maxTaxaBar = Math.max(META_TAXA_DEFEITO*1.5, ...linhasOrdenadas.map(l=>l.taxa));
+  const metaPctBar = Math.min(100, (META_TAXA_DEFEITO/maxTaxaBar)*100);
+  relatorioCharts.push({ tipo:'bar', titulo:'Resumo Geral', linhas: linhasOrdenadas.map(l=>({linha:l.linha, taxa:l.taxa})), maxTaxaBar, metaValor: META_TAXA_DEFEITO });
+  html += `<div class="dash-section relatorio-page">
+    <div style="display:flex; align-items:center; gap:10px;"><h3 style="margin:0;">Resumo Geral</h3>${botaoCopiar(relatorioCharts.length-1)}</div>
+    <div class="barchart">
+      <div class="meta-line" style="bottom:${metaPctBar}%;"></div>
+      ${linhasOrdenadas.map(l=>{
+        const h = Math.max(2, Math.min(100, (l.taxa/maxTaxaBar)*100));
+        return `<div class="bar-col">
+          <div class="bar-val" style="color:${l.taxa<=META_TAXA_DEFEITO?'var(--verde-escuro)':'var(--red)'}">${l.taxa.toFixed(2).replace('.',',')}%</div>
+          <div class="bar-fill" style="height:${h}%; background:${l.taxa<=META_TAXA_DEFEITO?'var(--teal)':'var(--red)'};"></div>
+          <div class="bar-label">${escapeHtml(l.linha)}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="relatorio-meta-linha">Linha tracejada = meta (${String(META_TAXA_DEFEITO).replace('.',',')}%) · Percentual de defeitos geral: <b style="color:${geral.taxa<=META_TAXA_DEFEITO?'var(--verde-escuro)':'var(--red)'}">${geral.taxa.toFixed(2).replace('.',',')}%</b></div>
+  </div>`;
+
+  conteudo.innerHTML = html;
+  document.getElementById('btnImprimirRelatorio').style.display = 'inline-block';
+  document.querySelectorAll('.btn-copiar-grafico').forEach(btn=>{
+    btn.addEventListener('click', ()=>copiarGraficoComoImagem(parseInt(btn.dataset.chartIdx,10)));
+  });
+}
+
+/* ===================== EXPORTAR GRÁFICO DO RELATÓRIO COMO IMAGEM ===================== */
+const CORES_CANVAS = { 'var(--red)':'#D32F2F', 'var(--teal)':'#2DB547', 'var(--border)':'#E8E8E8', 'var(--amber)':'#F57C00', 'var(--verde-escuro)':'#1A6B35' };
+function resolveCorCanvas(c){ return CORES_CANVAS[c] || c; }
+
+function desenharDonutCanvas(spec){
+  const W = 460, donutSize = 220, linhaLegenda = 20;
+  const H = 50 + donutSize + 20 + spec.legend.length*linhaLegenda + 20;
+  const dpr = 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = W*dpr; canvas.height = H*dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle = '#1A1A1A';
+  ctx.font = 'bold 16px Segoe UI, Arial, sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText(spec.titulo, 18, 16);
+
+  const cx = W/2, cy = 50 + donutSize/2, R = donutSize/2 - 6, holeR = R*0.55;
+  let segs = spec.segments.map(s=>({ pct:s.pct, color: resolveCorCanvas(s.color) }));
+  const soma = segs.reduce((a,s)=>a+s.pct,0);
+  if(soma<99.9) segs.push({ pct: 100-soma, color: resolveCorCanvas(spec.corRestante||'var(--teal)') });
+  let ang = -Math.PI/2;
+  segs.forEach(s=>{
+    const sweep = (s.pct/100)*Math.PI*2;
+    if(sweep<=0) return;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,R, ang, ang+sweep);
+    ctx.closePath();
+    ctx.fillStyle = s.color;
+    ctx.fill();
+    ang += sweep;
+  });
+  ctx.beginPath();
+  ctx.arc(cx,cy,holeR,0,Math.PI*2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  if(spec.centerLabel){
+    ctx.fillStyle = '#1A1A1A';
+    ctx.font = 'bold 22px Segoe UI, Arial, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(spec.centerLabel, cx, cy);
+  }
+
+  let ly = 50 + donutSize + 16;
+  ctx.font = '13px Segoe UI, Arial, sans-serif';
+  ctx.textBaseline = 'top';
+  spec.legend.forEach(item=>{
+    ctx.fillStyle = resolveCorCanvas(item.color);
+    ctx.fillRect(18, ly+2, 11, 11);
+    ctx.fillStyle = '#333333';
+    ctx.textAlign = 'left';
+    ctx.fillText(item.label, 36, ly);
+    ly += linhaLegenda;
+  });
+  return canvas;
+}
+
+function desenharBarrasCanvas(spec){
+  const colW = 66, chartH = 240, padTop = 50, padBottom = 60, padSide = 24;
+  const W = Math.max(480, spec.linhas.length*colW + padSide*2);
+  const H = padTop + chartH + padBottom;
+  const dpr = 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = W*dpr; canvas.height = H*dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle = '#1A1A1A';
+  ctx.font = 'bold 16px Segoe UI, Arial, sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText(spec.titulo, 18, 14);
+
+  const baseline = padTop + chartH;
+  const metaY = baseline - (spec.metaValor/spec.maxTaxaBar)*chartH;
+  ctx.strokeStyle = '#D32F2F';
+  ctx.setLineDash([5,4]);
+  ctx.beginPath();
+  ctx.moveTo(padSide, metaY);
+  ctx.lineTo(W-padSide, metaY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  spec.linhas.forEach((l,i)=>{
+    const x = padSide + i*colW;
+    const h = Math.max(2, Math.min(chartH, (l.taxa/spec.maxTaxaBar)*chartH));
+    const cor = l.taxa<=spec.metaValor ? '#2DB547' : '#D32F2F';
+    ctx.fillStyle = cor;
+    ctx.fillRect(x+8, baseline-h, colW-24, h);
+    ctx.fillStyle = cor;
+    ctx.font = 'bold 11px Segoe UI, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(l.taxa.toFixed(2).replace('.',',')+'%', x+colW/2-4, baseline-h-16);
+    ctx.fillStyle = '#444444';
+    ctx.font = '10px Segoe UI, Arial, sans-serif';
+    ctx.fillText(l.linha.length>9 ? l.linha.slice(0,9)+'…' : l.linha, x+colW/2-4, baseline+8);
+  });
+  return canvas;
+}
+
+async function copiarGraficoComoImagem(idx){
+  const spec = relatorioCharts[idx];
+  if(!spec) return;
+  const canvas = spec.tipo==='bar' ? desenharBarrasCanvas(spec) : desenharDonutCanvas(spec);
+  canvas.toBlob(async (blob)=>{
+    if(!blob){ showToast('Erro ao gerar a imagem'); return; }
+    try{
+      await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]);
+      showToast('Imagem copiada — cole onde quiser (Ctrl+V)');
+    } catch(err){
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = (spec.titulo || 'grafico').replace(/[^\w\-]+/g,'_') + '.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 2000);
+      showToast('Não foi possível copiar direto — baixei a imagem pra você');
+    }
+  }, 'image/png');
+}
+
+/* ===================== INICIALIZAÇÃO ===================== */
+startSession();
+</script>
+</body>
+</html>
