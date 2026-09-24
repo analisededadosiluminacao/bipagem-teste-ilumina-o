@@ -351,6 +351,9 @@
     #appShell.sidebar-collapsed #sidebar{ width:0; }
   }
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 </head>
 <body>
 
@@ -391,6 +394,7 @@
         </div>
       </div>
       <p class="subtitle" id="headerSubtitle">Dados salvos apenas neste tablet · funciona sem internet</p>
+      <p class="subtitle" id="syncStatus" style="margin-top:2px;">☁️ Conectando à sincronização em nuvem…</p>
     </header>
 
 <main id="appMain">
@@ -818,6 +822,93 @@
 <div class="toast" id="toast"></div>
 
 <script>
+/* ===================== FIREBASE (sincronização em nuvem entre unidades/tablets) =====================
+   Camada acoplada por cima do IndexedDB: toda escrita local também é enviada ao Firestore, e um
+   listener em tempo real traz pra cá o que outros dispositivos gravarem — sem mudar como o resto
+   do app lê os dados (tudo continua lendo do IndexedDB local, agora mantido em sincronia). */
+const firebaseConfig = {
+  apiKey: "AIzaSyCil72SE-24UshChgSFbvBhy6Hoyhq941w",
+  authDomain: "zagonel-bipagem-direta-a5e95.firebaseapp.com",
+  projectId: "zagonel-bipagem-direta-a5e95",
+  storageBucket: "zagonel-bipagem-direta-a5e95.firebasestorage.app",
+  messagingSenderId: "906433125451",
+  appId: "1:906433125451:web:89d5edc0fc63c973a881ce"
+};
+let firestoreDb = null;
+let firestoreProntoParaEscrita = false;
+let firestoreListenerAtivo = false;
+
+function setSyncStatus(texto){
+  const el = document.getElementById('syncStatus');
+  if(el) el.textContent = texto;
+}
+
+function initFirebaseSync(){
+  try{
+    const app = firebase.initializeApp(firebaseConfig);
+    firestoreDb = firebase.firestore();
+    firebase.auth().signInAnonymously().catch(err=>{
+      console.error('Falha ao autenticar no Firebase', err);
+      setSyncStatus('☁️ Sincronização indisponível (falha na autenticação) — funcionando só local');
+    });
+    firebase.auth().onAuthStateChanged(user=>{
+      if(user){
+        firestoreProntoParaEscrita = true;
+        setSyncStatus('☁️ Sincronizado em nuvem — outras unidades veem esta bipagem');
+        iniciarListenerFirestore();
+      }
+    });
+  } catch(err){
+    console.error('Firebase indisponível', err);
+    setSyncStatus('☁️ Sincronização indisponível — funcionando só local neste tablet');
+  }
+}
+
+/* Envia um registro (novo ou atualizado) pro Firestore. Silencioso se offline/sem permissão —
+   o registro já está salvo local, e será reenviado na próxima escrita ou sincronização. */
+function pushParaFirestore(rec){
+  if(!firestoreDb || !firestoreProntoParaEscrita) return;
+  firestoreDb.collection('registros').doc(rec.id).set(rec, {merge:true}).catch(err=>{
+    console.warn('Não sincronizou com a nuvem agora (fica salvo local):', err.message);
+  });
+}
+
+/* Upsert local "silencioso" — usado só pra gravar no IndexedDB o que chegou de outro dispositivo,
+   sem reenviar de volta pro Firestore (evita loop entre os dois). */
+async function putRecordLocal(rec){
+  const db = await dbPromise;
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).put(rec);
+    tx.oncomplete = ()=>resolve();
+    tx.onerror = ()=>reject(tx.error);
+  });
+}
+
+function refreshVisaoAtual(){
+  if(document.getElementById('bipagemView').style.display!=='none') refresh();
+  if(document.getElementById('consertoView').style.display!=='none') refreshConsertoFila();
+  if(document.getElementById('dashboardView').style.display!=='none') refreshDashboard();
+  if(document.getElementById('certificadosView').style.display!=='none') refreshCertificados();
+}
+
+function iniciarListenerFirestore(){
+  if(firestoreListenerAtivo) return;
+  firestoreListenerAtivo = true;
+  firestoreDb.collection('registros').onSnapshot(async snapshot=>{
+    let mudouAlgo = false;
+    for(const change of snapshot.docChanges()){
+      if(change.type==='removed') continue; // não removemos registros por aqui
+      await putRecordLocal(change.doc.data());
+      mudouAlgo = true;
+    }
+    if(mudouAlgo) refreshVisaoAtual();
+  }, err=>{
+    console.error('Erro no listener do Firestore', err);
+    setSyncStatus('☁️ Conexão com a nuvem interrompida — continuando só local');
+  });
+}
+
 /* ===================== CONFIG ===================== */
 const META_TAXA_DEFEITO = 1.5; // % — abaixo da meta é bom, acima é ruim
 const DB_NAME = 'bipagem_teste_driver';
@@ -1073,16 +1164,18 @@ let dbPromise = openDB();
 
 async function addRecord(rec){
   const db = await dbPromise;
-  return new Promise((resolve,reject)=>{
+  await new Promise((resolve,reject)=>{
     const tx = db.transaction(STORE,'readwrite');
     tx.objectStore(STORE).add(rec);
     tx.oncomplete = ()=>resolve();
     tx.onerror = ()=>reject(tx.error);
   });
+  pushParaFirestore(rec);
 }
 async function updateRecord(id, patch){
   const db = await dbPromise;
-  return new Promise((resolve,reject)=>{
+  let recAtualizado = null;
+  await new Promise((resolve,reject)=>{
     const tx = db.transaction(STORE,'readwrite');
     const store = tx.objectStore(STORE);
     const getReq = store.get(id);
@@ -1091,11 +1184,13 @@ async function updateRecord(id, patch){
       if(!rec){ reject(new Error('Registro não encontrado')); return; }
       Object.assign(rec, patch);
       store.put(rec);
+      recAtualizado = rec;
     };
     getReq.onerror = ()=>reject(getReq.error);
     tx.oncomplete = ()=>resolve();
     tx.onerror = ()=>reject(tx.error);
   });
+  if(recAtualizado) pushParaFirestore(recAtualizado);
 }
 async function getAllRecords(){
   const db = await dbPromise;
@@ -3477,6 +3572,7 @@ async function copiarGraficoComoImagem(idx){
 
 /* ===================== INICIALIZAÇÃO ===================== */
 startSession();
+initFirebaseSync();
 </script>
 </body>
 </html>
