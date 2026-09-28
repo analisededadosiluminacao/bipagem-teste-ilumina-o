@@ -348,7 +348,7 @@
   .cartao-causa-nome{ font-size:11px; color:#555; margin-top:2px; }
   .cartao-desfecho-nome{ font-size:10.5px; color:#2a8f4d; margin-top:4px; font-weight:600; }
   .cartao-encaminhar-aviso{ font-size:11.5px; color:#d21212; margin-top:6px; font-weight:800; letter-spacing:.3px; }
-  .cartao-manual{ border-color:#000 !important; width:auto; }
+  .cartao-manual{ border-color:#000 !important; }
   .cartao-remover{ margin-top:2px; font-size:11px; color:var(--red); background:none; border:none; cursor:pointer; text-decoration:underline; padding:0; }
 
   @media print{
@@ -814,19 +814,7 @@
 
   <div class="scan-box no-print">
     <label>Baralho de cartões de defeito (QR code)</label>
-    <div class="scan-hint" style="margin-bottom:14px;">Monte um baralho com os defeitos mais frequentes da bancada. Por padrão, cada item gera um cartão de <b>frente e verso</b>: a <b>frente</b> (borda clara) já conserta a peça na hora com a causa raiz gravada; o <b>verso</b> (borda escura, mesma cor do defeito) encaminha pra fila de conserto pra investigar melhor a causa — imprima os dois lados, corte e cole-os costa a costa (ou plastifique junto) pra virar um cartão físico só. Pra defeitos que nunca são consertados na hora (ex: em curto, não parametriza), use "Só encaminhar pra conserto" abaixo — gera um único cartão já no visual de encaminhamento, sem precisar de causa raiz. Cada defeito recebe automaticamente uma cor própria, sempre a mesma.</div>
-  </div>
-
-  <div class="scan-box no-print" style="border-color:#000;">
-    <label>Cartão de edição manual (universal — vale pras duas unidades)</label>
-    <div class="scan-hint" style="margin-bottom:12px;">Pra defeitos fora do baralho. Bipe este cartão com a peça pendente que abre um formulário rápido pra escrever o defeito e a causa na hora — ele lembra o último defeito/causa escritos (por unidade) e já vem preenchido, até você editar de novo.</div>
-    <div style="display:flex; justify-content:center;">
-      <div class="cartao-defeito cartao-manual" style="max-width:170px;">
-        <div class="cartao-qr" id="cartaoManualQr"></div>
-        <div class="cartao-defeito-nome">✎ EDIÇÃO MANUAL</div>
-        <div class="cartao-causa-nome">defeito + causa na hora</div>
-      </div>
-    </div>
+    <div class="scan-hint" style="margin-bottom:14px;">Monte um baralho com os defeitos mais frequentes da bancada. Por padrão, cada item gera um cartão de <b>frente e verso</b>: a <b>frente</b> (borda clara) já conserta a peça na hora com a causa raiz gravada; o <b>verso</b> (borda escura, mesma cor do defeito) encaminha pra fila de conserto pra investigar melhor a causa — imprima os dois lados, corte e cole-os costa a costa (ou plastifique junto) pra virar um cartão físico só. Pra defeitos que nunca são consertados na hora (ex: em curto, não parametriza), use "Só encaminhar pra conserto" abaixo — gera um único cartão já no visual de encaminhamento, sem precisar de causa raiz. Cada defeito recebe automaticamente uma cor própria, sempre a mesma. O cartão preto ✎ EDIÇÃO MANUAL (fixo, sempre impresso junto) é universal pras duas unidades — bipe-o com a peça pendente pra escrever defeito e causa na hora; ele lembra o último texto digitado por unidade até você editar de novo.</div>
   </div>
 
   <div class="scan-box no-print">
@@ -4377,8 +4365,19 @@ function refreshCartoesDefeito(){
   const lista = todos[cartoesUnidadeAtual] || [];
   const grid = document.getElementById('cartoesGrid');
   document.getElementById('cartoesEmptyState').style.display = lista.length ? 'none' : 'block';
-  grid.innerHTML = lista.map((item, idx)=>renderCartaoItem(cartoesUnidadeAtual, item, idx)).join('');
-  document.getElementById('cartaoManualQr').innerHTML = gerarQrSvg(CARTAO_MANUAL_CODIGO);
+  grid.innerHTML = renderCartaoManual() + lista.map((item, idx)=>renderCartaoItem(cartoesUnidadeAtual, item, idx)).join('');
+}
+
+/* Cartão fixo, universal (não depende da unidade) e sem botão de remover — sempre aparece
+   junto dos outros dentro da grade, então entra na impressão normalmente com o resto. */
+function renderCartaoManual(){
+  return `<div class="cartao-par">
+    <div class="cartao-defeito cartao-manual">
+      <div class="cartao-qr">${gerarQrSvg(CARTAO_MANUAL_CODIGO)}</div>
+      <div class="cartao-defeito-nome">✎ EDIÇÃO MANUAL</div>
+      <div class="cartao-causa-nome">defeito + causa na hora</div>
+    </div>
+  </div>`;
 }
 
 document.getElementById('cartoesUnidadeIlum').addEventListener('click', ()=>{
