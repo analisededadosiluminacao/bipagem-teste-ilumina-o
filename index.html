@@ -3254,6 +3254,8 @@ function initFirebaseSync(){
         firestoreProntoParaEscrita = true;
         setSyncStatus('☁️ Sincronizado em nuvem — outras unidades veem esta bipagem');
         iniciarListenerFirestore();
+        sincronizarConfigInicial();
+        iniciarListenerConfigFirestore();
       }
     });
   } catch(err){
@@ -3304,6 +3306,67 @@ function iniciarListenerFirestore(){
   }, err=>{
     console.error('Erro no listener do Firestore', err);
     setSyncStatus('☁️ Conexão com a nuvem interrompida — continuando só local');
+  });
+}
+
+/* ===================== SYNC DE CONFIGURAÇÃO DOS CARTÕES =====================
+   O baralho de cartões de defeito, a memória do cartão de edição manual e o mapa de cores
+   de cada defeito ficavam só no localStorage — ou seja, um cartão configurado/impresso num
+   tablet não era reconhecido em outro, porque o baralho daquele outro dispositivo simplesmente
+   não tinha aquele defeito/causa cadastrado. Sincroniza esses três dados pela mesma nuvem já
+   usada pros registros de bipagem, num documento por chave dentro da coleção 'config_app'. */
+const CONFIG_SYNC_KEYS = ['bipagem_cartoes_defeito', 'bipagem_cartao_manual_memoria', 'bipagem_cor_indice_defeito'];
+let configListenerAtivo = false;
+let configSyncAplicandoRemoto = false; // true enquanto grava algo que chegou da nuvem — evita reenviar (loop)
+
+function pushConfigParaFirestore(chave){
+  if(!firestoreDb || !firestoreProntoParaEscrita) return;
+  if(configSyncAplicandoRemoto) return;
+  const valor = localStorage.getItem(chave);
+  if(valor === null) return;
+  firestoreDb.collection('config_app').doc(chave).set({
+    valor: valor,
+    atualizadoEm: Date.now()
+  }).catch(err=>{
+    console.warn('Configuração de cartões não sincronizou agora (fica salva local):', err.message);
+  });
+}
+
+/* Na primeira vez que a nuvem fica disponível, sobe o que já existir localmente pra cada chave
+   que ainda não tenha documento na nuvem — assim um baralho criado antes da sincronização existir
+   (ou criado offline) não fica perdido, sem sobrescrever um documento que já esteja lá. */
+function sincronizarConfigInicial(){
+  CONFIG_SYNC_KEYS.forEach(chave=>{
+    if(localStorage.getItem(chave) === null) return;
+    firestoreDb.collection('config_app').doc(chave).get().then(snap=>{
+      if(!snap.exists) pushConfigParaFirestore(chave);
+    }).catch(()=>{});
+  });
+}
+
+function iniciarListenerConfigFirestore(){
+  if(configListenerAtivo) return;
+  configListenerAtivo = true;
+  firestoreDb.collection('config_app').onSnapshot(snapshot=>{
+    let mudouCartoes = false;
+    for(const change of snapshot.docChanges()){
+      if(change.type === 'removed') continue;
+      const chave = change.doc.id;
+      if(!CONFIG_SYNC_KEYS.includes(chave)) continue;
+      const dados = change.doc.data();
+      if(!dados || typeof dados.valor !== 'string') continue;
+      if(localStorage.getItem(chave) === dados.valor) continue; // já está igual
+      configSyncAplicandoRemoto = true;
+      localStorage.setItem(chave, dados.valor);
+      configSyncAplicandoRemoto = false;
+      mudouCartoes = true;
+    }
+    if(mudouCartoes){
+      const viewCartoes = document.getElementById('cartoesDefeitoView');
+      if(viewCartoes && viewCartoes.style.display !== 'none') refreshCartoesDefeito();
+    }
+  }, err=>{
+    console.error('Erro no listener de configuração do Firestore', err);
   });
 }
 
@@ -4201,6 +4264,7 @@ function getCartoesDefeito(){
 }
 function saveCartoesDefeito(dados){
   localStorage.setItem('bipagem_cartoes_defeito', JSON.stringify(dados));
+  pushConfigParaFirestore('bipagem_cartoes_defeito');
 }
 
 /* Código de um lado específico do cartão: FRENTE = consertar agora (leva a causa), VERSO =
@@ -4262,6 +4326,7 @@ function corDefeito(unidade, defeito){
   if(!(defeito in mapa[unidade])){
     mapa[unidade][defeito] = Object.keys(mapa[unidade]).length;
     localStorage.setItem('bipagem_cor_indice_defeito', JSON.stringify(mapa));
+    pushConfigParaFirestore('bipagem_cor_indice_defeito');
   }
   const idx = mapa[unidade][defeito];
   const hue = Math.round((idx * 137.508) % 360);
@@ -4441,6 +4506,7 @@ function saveMemoriaCartaoManual(unidade, defeito, causa){
   const memoria = getMemoriaCartaoManual();
   memoria[unidade] = { defeito, causa };
   localStorage.setItem('bipagem_cartao_manual_memoria', JSON.stringify(memoria));
+  pushConfigParaFirestore('bipagem_cartao_manual_memoria');
 }
 
 let cartaoManualPecaPendente = null;
