@@ -337,21 +337,29 @@
   .relatorio-familia h4{ margin:0 0 10px; font-size:13px; color:var(--verde-escuro); }
   .relatorio-meta-linha{ font-size:11.5px; color:var(--text-secondary); margin-top:8px; }
 
-  .cartoes-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:14px; margin-top:16px; }
-  .cartao-defeito{ background:#fff; border:2px solid var(--border); border-radius:12px; padding:14px 10px; text-align:center; break-inside:avoid; }
-  .cartao-qr{ line-height:0; }
+  .cartoes-grid{ display:flex; flex-wrap:wrap; gap:18px; margin-top:16px; align-items:flex-start; }
+  .cartao-par{ display:flex; flex-direction:column; align-items:center; gap:8px; background:var(--bg-panel); border-radius:12px; padding:10px; }
+  .cartao-par .cartao-defeito + .cartao-defeito{ margin-top:0; }
+  .cartao-defeito{ background:#fff; border:3px solid var(--border); border-radius:12px; padding:14px 10px 10px; text-align:center; break-inside:avoid; width:160px; position:relative; }
+  .cartao-lado-tag{ position:absolute; top:6px; left:8px; font-size:9px; letter-spacing:.5px; color:#999; font-weight:700; }
+  .cartao-qr{ line-height:0; margin-top:10px; }
   .cartao-qr svg{ width:100%; height:auto; max-width:150px; }
   .cartao-defeito-nome{ font-weight:700; margin-top:8px; font-size:12.5px; color:#111; }
   .cartao-causa-nome{ font-size:11px; color:#555; margin-top:2px; }
-  .cartao-remover{ margin-top:8px; font-size:11px; color:var(--red); background:none; border:none; cursor:pointer; text-decoration:underline; padding:0; }
+  .cartao-desfecho-nome{ font-size:10.5px; color:#2a8f4d; margin-top:4px; font-weight:600; }
+  .cartao-encaminhar-aviso{ font-size:11.5px; color:#d21212; margin-top:6px; font-weight:800; letter-spacing:.3px; }
+  .cartao-manual{ border-color:#000 !important; width:auto; }
+  .cartao-remover{ margin-top:2px; font-size:11px; color:var(--red); background:none; border:none; cursor:pointer; text-decoration:underline; padding:0; }
 
   @media print{
     #sidebar, header, .filter-row, .date-range-row, #certSubnavPills, .btn-secondary, .no-print{ display:none !important; }
     body, main{ background:#fff !important; }
     .app-col{ display:block !important; }
     .relatorio-familia{ break-inside:avoid; }
-    .cartoes-grid{ grid-template-columns:repeat(3, 1fr); }
-    .cartao-defeito{ border:1.5px dashed #999; }
+    .cartoes-grid{ display:flex; flex-wrap:wrap; }
+    .cartao-par{ background:#fff; break-inside:avoid; }
+    .cartao-defeito{ border-width:3px !important; border-style:solid !important; }
+    .cartao-lado-tag{ color:#bbb; }
   }
 
   /* Telas estreitas (celular): sidebar vira uma faixa horizontal no topo, rolável */
@@ -469,6 +477,29 @@
         </div>
       </div>
       <button class="btn-save" id="btnSalvarDefeito">Salvar registro de defeito</button>
+    </div>
+  </div>
+
+  <div class="confirm-panel" id="cartaoManualPanel" style="display:none;">
+    <div class="confirm-produto" id="cartaoManualPecaInfo" style="display:block;"></div>
+    <div class="field">
+      <label>Defeito</label>
+      <input type="text" id="cartaoManualDefeito" placeholder="Escreva o defeito">
+    </div>
+    <div class="field">
+      <label>Causa raiz</label>
+      <input type="text" id="cartaoManualCausa" placeholder="Escreva a causa raiz">
+    </div>
+    <div class="field">
+      <label>O que fazer com esta peça?</label>
+      <div class="toggle-row">
+        <button class="toggle-btn active-yes" id="cartaoManualAgora" type="button">Consertar agora</button>
+        <button class="toggle-btn" id="cartaoManualConserto" type="button">Enviar para conserto</button>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-cancel" id="btnCartaoManualCancelar" type="button">Cancelar</button>
+      <button class="btn-save" id="btnCartaoManualSalvar" type="button" style="flex:1;">Salvar</button>
     </div>
   </div>
 
@@ -783,8 +814,23 @@
 
   <div class="scan-box no-print">
     <label>Baralho de cartões de defeito (QR code)</label>
-    <div class="scan-hint" style="margin-bottom:14px;">Monte um baralho com os defeitos mais frequentes da bancada. Depois de bipar uma peça, se ela tiver defeito, basta bipar o cartão correspondente — o sistema já registra o defeito, a causa raiz e marca como consertado na hora, sem precisar tocar em nada na tela. Casos fora do baralho continuam pelo formulário manual de sempre (⚠ Registrar defeito).</div>
+    <div class="scan-hint" style="margin-bottom:14px;">Monte um baralho com os defeitos mais frequentes da bancada. Cada item do baralho gera um cartão de <b>frente e verso</b>: a <b>frente</b> (borda clara) já conserta a peça na hora com a causa raiz gravada; o <b>verso</b> (borda escura, mesma cor do defeito) encaminha pra fila de conserto pra investigar melhor a causa, sem precisar tocar em nada na tela — imprima os dois lados, corte e cole-os costa a costa (ou plastifique junto) pra virar um cartão físico só. Cada defeito recebe automaticamente uma cor própria, sempre a mesma.</div>
+  </div>
 
+  <div class="scan-box no-print" style="border-color:#000;">
+    <label>Cartão de edição manual (universal — vale pras duas unidades)</label>
+    <div class="scan-hint" style="margin-bottom:12px;">Pra defeitos fora do baralho. Bipe este cartão com a peça pendente que abre um formulário rápido pra escrever o defeito e a causa na hora — ele lembra o último defeito/causa escritos (por unidade) e já vem preenchido, até você editar de novo.</div>
+    <div style="display:flex; justify-content:center;">
+      <div class="cartao-defeito cartao-manual" style="max-width:170px;">
+        <div class="cartao-qr" id="cartaoManualQr"></div>
+        <div class="cartao-defeito-nome">✎ EDIÇÃO MANUAL</div>
+        <div class="cartao-causa-nome">defeito + causa na hora</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scan-box no-print">
+    <label>Adicionar cartão ao baralho</label>
     <div class="toggle-row" style="margin-bottom:14px;">
       <button class="toggle-btn active-yes" id="cartoesUnidadeIlum" type="button">Iluminação</button>
       <button class="toggle-btn" id="cartoesUnidadeElet" type="button">Eletrônica</button>
@@ -3293,6 +3339,24 @@ document.addEventListener('mousedown', (e)=>{
   if(el) forcarTecladoVirtual(el);
 });
 
+/* ===================== SEMPRE MAIÚSCULO =====================
+   Regra geral: todo campo de texto digitado à mão vira maiúsculo automaticamente, enquanto o
+   operador digita — evita "SOLDA fria" e "Solda Fria" virarem cadastros diferentes por causa
+   de caixa alta/baixa, e mantém tudo no mesmo padrão visual do resto do app (que já usa
+   maiúsculas nos defeitos). Os campos de bipagem (scanner) ficam de fora — eles recebem o
+   código exatamente como o leitor bipar, sem qualquer transformação. */
+const CAMPOS_SEM_MAIUSCULA_FORCADA = ['scanInput','consertoScanInput','componenteExternoScanInput','confirmarRecebimentoScanInput','consertoComponenteSerial','consertoDriverSubstituto','requisicaoDriverSerial'];
+document.addEventListener('input', (e)=>{
+  const el = e.target;
+  if(!el || !el.matches || !el.matches('input[type="text"], input:not([type]), textarea')) return;
+  if(CAMPOS_SEM_MAIUSCULA_FORCADA.indexOf(el.id) !== -1) return;
+  const upper = el.value.toUpperCase();
+  if(upper === el.value) return;
+  const start = el.selectionStart, end = el.selectionEnd;
+  el.value = upper;
+  try{ el.setSelectionRange(start, end); }catch(err){ /* alguns tipos de input não suportam — ignora */ }
+});
+
 /* ===================== CONFIG ===================== */
 const META_TAXA_DEFEITO = 1.5; // % — abaixo da meta é bom, acima é ruim
 const DB_NAME = 'bipagem_teste_driver';
@@ -3907,6 +3971,10 @@ scanInput.addEventListener('keydown', async (e)=>{
      defeito (QR), aplica o defeito direto nela — essa é a "2ª bipagem" do fluxo de cartões,
      sem precisar tocar em nada na tela. */
   if(pending){
+    if(raw === CARTAO_MANUAL_CODIGO){
+      abrirCartaoManual(pending);
+      return;
+    }
     const card = parseDefCard(raw);
     if(card && card.unidade === pending.unidade){
       await aplicarCartaoDefeito(pending, card);
@@ -4061,29 +4129,30 @@ const DEFEITOS_ELETRONICA = ['EM CURTO','POTÊNCIA ALTA','POTÊNCIA BAIXA','NÃO
 
 /* Causas raiz padrão por unidade — agiliza o lançamento porque muitos defeitos se repetem pelo
    mesmo motivo. A opção "Outros" limpa a seleção e deixa o operador digitar livremente abaixo. */
+const CAUSA_OUTROS = 'OUTROS / DIGITAR MANUALMENTE';
 const CAUSAS_RAIZ_ILUMINACAO = [
-  'Solda fria',
-  'Componente com defeito de fábrica',
-  'Driver com problema',
-  'Cabo rompido / mal conectado',
-  'Falha de vedação (entrada de água)',
-  'Erro de montagem',
-  'Erro de gravação/parametrização',
-  'Contaminação (poeira/sujeira)',
-  'Componente danificado no transporte',
-  'Outros / digitar manualmente'
+  'SOLDA FRIA',
+  'COMPONENTE COM DEFEITO DE FÁBRICA',
+  'DRIVER COM PROBLEMA',
+  'CABO ROMPIDO / MAL CONECTADO',
+  'FALHA DE VEDAÇÃO (ENTRADA DE ÁGUA)',
+  'ERRO DE MONTAGEM',
+  'ERRO DE GRAVAÇÃO/PARAMETRIZAÇÃO',
+  'CONTAMINAÇÃO (POEIRA/SUJEIRA)',
+  'COMPONENTE DANIFICADO NO TRANSPORTE',
+  CAUSA_OUTROS
 ];
 const CAUSAS_RAIZ_ELETRONICA = [
-  'Solda fria',
-  'Componente eletrônico queimado',
-  'Curto no circuito',
-  'Componente fora de especificação',
-  'Falha em capacitor',
-  'Falha no CI de dimerização',
-  'Mau contato em cabo/conector',
-  'Erro de parametrização de fábrica',
-  'Componente com defeito de fábrica (fornecedor)',
-  'Outros / digitar manualmente'
+  'SOLDA FRIA',
+  'COMPONENTE ELETRÔNICO QUEIMADO',
+  'CURTO NO CIRCUITO',
+  'COMPONENTE FORA DE ESPECIFICAÇÃO',
+  'FALHA EM CAPACITOR',
+  'FALHA NO CI DE DIMERIZAÇÃO',
+  'MAU CONTATO EM CABO/CONECTOR',
+  'ERRO DE PARAMETRIZAÇÃO DE FÁBRICA',
+  'COMPONENTE COM DEFEITO DE FÁBRICA (FORNECEDOR)',
+  CAUSA_OUTROS
 ];
 
 function populateDefeitoTipoSelect(){
@@ -4106,7 +4175,7 @@ function wireCausaRaizSelect(selectId, textareaId){
     const val = e.target.value;
     const textarea = document.getElementById(textareaId);
     if(!val) return;
-    if(val === 'Outros / digitar manualmente'){
+    if(val === CAUSA_OUTROS){
       select.value = '';
       textarea.value = '';
       textarea.focus();
@@ -4138,26 +4207,36 @@ function saveCartoesDefeito(dados){
   localStorage.setItem('bipagem_cartoes_defeito', JSON.stringify(dados));
 }
 
-function montarCodigoCartao(unidade, defeito, causa){
-  return 'DEFCARD|'+CARTAO_UNIDADE_CODE[unidade]+'|'+defeito+'|'+causa;
+/* Código de um lado específico do cartão: FRENTE = consertar agora (leva a causa), VERSO =
+   encaminhar pra fila de conserto pra investigar melhor a causa (por isso não leva causa —
+   fica em branco de propósito, quem vai investigar é o conserto). */
+function montarCodigoCartao(unidade, desfecho, defeito, causa){
+  return 'DEFCARD|'+CARTAO_UNIDADE_CODE[unidade]+'|'+desfecho+'|'+defeito+'|'+(causa||'');
 }
+const CARTAO_MANUAL_CODIGO = 'DEFCARD|MANUAL';
 
 /* Reconhece um código de cartão de defeito bipado e confere se ele corresponde a um cartão
    que realmente existe no baralho salvo daquela unidade — não só se defeito/causa "fazem
    sentido" isoladamente. Isso permite defeito/causa digitados livremente (não só os da lista
-   padrão) e, ao mesmo tempo, invalida automaticamente um cartão removido do baralho. */
+   padrão) e, ao mesmo tempo, invalida automaticamente um cartão removido do baralho.
+   No lado VERSO (encaminhar pra conserto) só o defeito precisa existir no baralho — a causa
+   fica pro conserto investigar, então não faz parte da validação desse lado. */
 function parseDefCard(raw){
   if(typeof raw !== 'string' || raw.indexOf('DEFCARD|') !== 0) return null;
   const partes = raw.split('|');
-  if(partes.length !== 4) return null;
+  if(partes.length !== 5) return null;
   const unidade = CARTAO_CODE_UNIDADE[partes[1]];
   if(!unidade) return null;
-  const defeito = partes[2];
-  const causa = partes[3];
+  const desfecho = partes[2];
+  if(desfecho !== 'AGORA' && desfecho !== 'CONSERTO') return null;
+  const defeito = partes[3];
+  const causa = partes[4];
   const baralho = getCartoesDefeito()[unidade] || [];
-  const existe = baralho.some(i=>i.defeito===defeito && i.causa===causa);
+  const existe = desfecho==='AGORA'
+    ? baralho.some(i=>i.defeito===defeito && i.causa===causa)
+    : baralho.some(i=>i.defeito===defeito);
   if(!existe) return null;
-  return { unidade, defeito, causa };
+  return { unidade, desfecho, defeito, causa: desfecho==='AGORA' ? causa : null };
 }
 
 function gerarQrSvg(texto){
@@ -4167,9 +4246,19 @@ function gerarQrSvg(texto){
   return qr.createSvgTag({ cellSize:4, margin:8, scalable:true });
 }
 
+/* Uma cor por defeito (hash determinístico do texto → matiz HSL), sempre a mesma pra um mesmo
+   texto de defeito — a frente do cartão usa um tom claro dessa cor, o verso um tom escuro. A
+   cor fica só na borda (fundo do cartão continua branco). */
+function corDefeito(defeito){
+  let hash = 0;
+  for(let i=0;i<defeito.length;i++){ hash = (hash*31 + defeito.charCodeAt(i)) % 360; }
+  const hue = Math.abs(hash);
+  return { clara: `hsl(${hue}, 65%, 82%)`, escura: `hsl(${hue}, 70%, 32%)` };
+}
+
 function populateCartaoNovoSelects(){
   const defeitos = (cartoesUnidadeAtual==='Eletrônica' ? DEFEITOS_ELETRONICA : DEFEITOS_ILUMINACAO).filter(d=>d!=='OUTROS');
-  const causas = (cartoesUnidadeAtual==='Eletrônica' ? CAUSAS_RAIZ_ELETRONICA : CAUSAS_RAIZ_ILUMINACAO).filter(c=>c!=='Outros / digitar manualmente');
+  const causas = (cartoesUnidadeAtual==='Eletrônica' ? CAUSAS_RAIZ_ELETRONICA : CAUSAS_RAIZ_ILUMINACAO).filter(c=>c!==CAUSA_OUTROS);
   document.getElementById('cartaoNovoDefeito').innerHTML = defeitos.map(d=>`<option>${escapeHtml(d)}</option>`).join('');
   document.getElementById('cartaoNovoCausa').innerHTML = causas.map(c=>`<option>${escapeHtml(c)}</option>`).join('');
 }
@@ -4205,6 +4294,31 @@ function resetModoCartaoCampos(){
   document.getElementById('linkCartaoCausaModo').textContent = '✎ digitar outra causa';
 }
 
+/* Renderiza o par frente/verso de um item do baralho: frente clara = consertar agora (com a
+   causa gravada), verso escuro = encaminhar pra conserto (defeito só, causa a investigar). O
+   aviso "ENCAMINHAR PARA CONSERTO" no verso é sempre vermelho, seja qual for a cor do defeito. */
+function renderCartaoPar(unidade, item, idx){
+  const cor = corDefeito(item.defeito);
+  const codigoFrente = montarCodigoCartao(unidade, 'AGORA', item.defeito, item.causa);
+  const codigoVerso = montarCodigoCartao(unidade, 'CONSERTO', item.defeito, '');
+  return `<div class="cartao-par">
+    <div class="cartao-defeito" style="border-color:${cor.clara};">
+      <div class="cartao-lado-tag">FRENTE</div>
+      <div class="cartao-qr">${gerarQrSvg(codigoFrente)}</div>
+      <div class="cartao-defeito-nome">${escapeHtml(item.defeito)}</div>
+      <div class="cartao-causa-nome">${escapeHtml(item.causa)}</div>
+      <div class="cartao-desfecho-nome">Consertar agora</div>
+    </div>
+    <div class="cartao-defeito" style="border-color:${cor.escura};">
+      <div class="cartao-lado-tag">VERSO</div>
+      <div class="cartao-qr">${gerarQrSvg(codigoVerso)}</div>
+      <div class="cartao-defeito-nome">${escapeHtml(item.defeito)}</div>
+      <div class="cartao-encaminhar-aviso">ENCAMINHAR PARA CONSERTO</div>
+    </div>
+    <button class="cartao-remover no-print" data-idx="${idx}" type="button">✕ Remover este cartão (frente + verso)</button>
+  </div>`;
+}
+
 function refreshCartoesDefeito(){
   document.getElementById('cartoesUnidadeIlum').className = cartoesUnidadeAtual==='Iluminação' ? 'toggle-btn active-yes' : 'toggle-btn';
   document.getElementById('cartoesUnidadeElet').className = cartoesUnidadeAtual==='Eletrônica' ? 'toggle-btn active-yes' : 'toggle-btn';
@@ -4214,15 +4328,8 @@ function refreshCartoesDefeito(){
   const lista = todos[cartoesUnidadeAtual] || [];
   const grid = document.getElementById('cartoesGrid');
   document.getElementById('cartoesEmptyState').style.display = lista.length ? 'none' : 'block';
-  grid.innerHTML = lista.map((item, idx)=>{
-    const codigo = montarCodigoCartao(cartoesUnidadeAtual, item.defeito, item.causa);
-    return `<div class="cartao-defeito">
-      <div class="cartao-qr">${gerarQrSvg(codigo)}</div>
-      <div class="cartao-defeito-nome">${escapeHtml(item.defeito)}</div>
-      <div class="cartao-causa-nome">${escapeHtml(item.causa)}</div>
-      <button class="cartao-remover no-print" data-idx="${idx}" type="button">✕ Remover</button>
-    </div>`;
-  }).join('');
+  grid.innerHTML = lista.map((item, idx)=>renderCartaoPar(cartoesUnidadeAtual, item, idx)).join('');
+  document.getElementById('cartaoManualQr').innerHTML = gerarQrSvg(CARTAO_MANUAL_CODIGO);
 }
 
 document.getElementById('cartoesUnidadeIlum').addEventListener('click', ()=>{
@@ -4238,10 +4345,10 @@ document.getElementById('btnAdicionarCartao').addEventListener('click', ()=>{
   const defeitoTextoVisivel = document.getElementById('cartaoNovoDefeitoTexto').style.display !== 'none';
   const causaTextoVisivel = document.getElementById('cartaoNovoCausaTexto').style.display !== 'none';
   /* O "|" é o separador do código do cartão — se o operador digitar um, troca por "/" pra não
-     quebrar a leitura do QR depois. */
-  let defeito = (defeitoTextoVisivel ? document.getElementById('cartaoNovoDefeitoTexto').value : document.getElementById('cartaoNovoDefeito').value).trim().replace(/\|/g, '/');
-  let causa = (causaTextoVisivel ? document.getElementById('cartaoNovoCausaTexto').value : document.getElementById('cartaoNovoCausa').value).trim().replace(/\|/g, '/');
-  if(defeitoTextoVisivel) defeito = defeito.toUpperCase();
+     quebrar a leitura do QR depois. A caixa de texto já entrega maiúsculo (regra geral do
+     app), então não precisa forçar aqui. */
+  const defeito = (defeitoTextoVisivel ? document.getElementById('cartaoNovoDefeitoTexto').value : document.getElementById('cartaoNovoDefeito').value).trim().replace(/\|/g, '/');
+  const causa = (causaTextoVisivel ? document.getElementById('cartaoNovoCausaTexto').value : document.getElementById('cartaoNovoCausa').value).trim().replace(/\|/g, '/');
   if(!defeito){ showToast('Informe o tipo de defeito'); return; }
   if(!causa){ showToast('Informe a causa raiz'); return; }
   const todos = getCartoesDefeito();
@@ -4267,6 +4374,71 @@ document.getElementById('cartoesGrid').addEventListener('click', (e)=>{
 
 document.getElementById('btnImprimirCartoes').addEventListener('click', ()=>{
   window.print();
+});
+
+/* ===================== CARTÃO DE EDIÇÃO MANUAL =====================
+   Um único cartão físico (preto), universal pras duas unidades — não codifica defeito nem
+   causa, só sinaliza "abra o formulário rápido". Lembra o último defeito/causa digitados por
+   unidade (guardados até serem editados de novo), pra agilizar quando o mesmo caso se repete. */
+function getMemoriaCartaoManual(){
+  const padrao = { 'Iluminação':{defeito:'',causa:''}, 'Eletrônica':{defeito:'',causa:''} };
+  try{
+    const salvo = JSON.parse(localStorage.getItem('bipagem_cartao_manual_memoria') || 'null');
+    if(salvo) return Object.assign(padrao, salvo);
+  }catch(err){ /* dado corrompido — segue com memória vazia */ }
+  return padrao;
+}
+function saveMemoriaCartaoManual(unidade, defeito, causa){
+  const memoria = getMemoriaCartaoManual();
+  memoria[unidade] = { defeito, causa };
+  localStorage.setItem('bipagem_cartao_manual_memoria', JSON.stringify(memoria));
+}
+
+let cartaoManualPecaPendente = null;
+let cartaoManualDesfechoValue = 'agora'; // 'agora' | 'conserto'
+
+function abrirCartaoManual(pecaPendente){
+  cartaoManualPecaPendente = pecaPendente;
+  clearPendingOkTimer();
+  confirmPanel.classList.remove('show');
+  defeitoForm.classList.remove('show');
+  const memoria = getMemoriaCartaoManual()[pecaPendente.unidade] || {defeito:'',causa:''};
+  document.getElementById('cartaoManualPecaInfo').textContent = 'Peça ' + pecaPendente.serial + ' · OP ' + (pecaPendente.op||'–') + ' · ' + pecaPendente.unidade;
+  document.getElementById('cartaoManualDefeito').value = memoria.defeito;
+  document.getElementById('cartaoManualCausa').value = memoria.causa;
+  cartaoManualDesfechoValue = 'agora';
+  atualizarBotoesCartaoManual();
+  document.getElementById('cartaoManualPanel').style.display = 'block';
+  document.getElementById('cartaoManualPanel').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function atualizarBotoesCartaoManual(){
+  document.getElementById('cartaoManualAgora').className = cartaoManualDesfechoValue==='agora' ? 'toggle-btn active-yes' : 'toggle-btn';
+  document.getElementById('cartaoManualConserto').className = cartaoManualDesfechoValue==='conserto' ? 'toggle-btn active-yes' : 'toggle-btn';
+}
+document.getElementById('cartaoManualAgora').addEventListener('click', ()=>{ cartaoManualDesfechoValue='agora'; atualizarBotoesCartaoManual(); });
+document.getElementById('cartaoManualConserto').addEventListener('click', ()=>{ cartaoManualDesfechoValue='conserto'; atualizarBotoesCartaoManual(); });
+
+document.getElementById('btnCartaoManualCancelar').addEventListener('click', ()=>{
+  cartaoManualPecaPendente = null;
+  pending = null;
+  document.getElementById('cartaoManualPanel').style.display = 'none';
+  focusScan();
+});
+
+document.getElementById('btnCartaoManualSalvar').addEventListener('click', async ()=>{
+  if(!cartaoManualPecaPendente) return;
+  const defeito = document.getElementById('cartaoManualDefeito').value.trim();
+  const causa = document.getElementById('cartaoManualCausa').value.trim();
+  if(!defeito){ showToast('Escreva o defeito'); return; }
+  if(!causa){ showToast('Escreva a causa raiz'); return; }
+  saveMemoriaCartaoManual(cartaoManualPecaPendente.unidade, defeito, causa);
+  const isAgora = cartaoManualDesfechoValue==='agora';
+  await salvarRegistroDefeito(defeito, isAgora ? causa : null, isAgora ? true : null, isAgora ? null : 'pendente', isAgora);
+  document.getElementById('cartaoManualPanel').style.display = 'none';
+  cartaoManualPecaPendente = null;
+  showToast('🏷 Defeito registrado via cartão de edição manual');
+  focusScan();
+  refresh();
 });
 
 function resetDefeitoForm(){
@@ -4382,10 +4554,11 @@ async function salvarRegistroDefeito(tipo, causa, consertado, statusConserto, is
   pending = null;
 }
 
-/* Fluxo rápido do cartão de defeito (QR): o cartão já bipado equivale a escolher o tipo de
-   defeito + causa raiz e marcar "Consertar agora → Sim" — cobre o caso mais comum da bancada
-   (defeito identificado e corrigido na hora). Casos fora do baralho continuam pelo formulário
-   manual (⚠ Registrar defeito), que ainda permite enviar pra fila de conserto. */
+/* Fluxo rápido do cartão de defeito (QR): a FRENTE do cartão (desfecho AGORA) equivale a
+   escolher o defeito + causa raiz e marcar "Consertar agora → Sim" — cobre o caso mais comum
+   da bancada. O VERSO (desfecho CONSERTO) envia pra fila de conserto sem causa definida, pra
+   investigar melhor — equivalente a "Enviar para conserto" no formulário manual. Casos fora
+   do baralho continuam pelo formulário manual (⚠ Registrar defeito). */
 async function aplicarCartaoDefeito(pecaPendente, card){
   clearPendingOkTimer();
   confirmPanel.classList.remove('show');
@@ -4394,9 +4567,12 @@ async function aplicarCartaoDefeito(pecaPendente, card){
   document.getElementById('dupWarning').style.display = 'none';
   document.getElementById('unidadeWarning').style.display = 'none';
   document.getElementById('confirmProduto').style.display = 'none';
-  await salvarRegistroDefeito(card.defeito, card.causa, true, null, true);
+  const isAgora = card.desfecho === 'AGORA';
+  await salvarRegistroDefeito(card.defeito, isAgora ? card.causa : null, isAgora ? true : null, isAgora ? null : 'pendente', isAgora);
   playAlertSound();
-  showToast('🏷 Defeito registrado via cartão · '+card.defeito+' — '+card.causa);
+  showToast(isAgora
+    ? '🏷 Defeito registrado via cartão · '+card.defeito+' — '+card.causa
+    : '🏷 Defeito registrado via cartão · '+card.defeito+' — encaminhado para conserto');
   focusScan();
   refresh();
 }
