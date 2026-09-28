@@ -130,6 +130,9 @@
   .scan-box-cartao{ border-color:var(--teal); padding:14px 16px; }
   .scan-box-cartao label{ color:var(--teal); font-weight:600; }
   .scan-box-cartao .scan-input{ font-size:16px; padding:10px 12px; }
+  .btn-remover-defeito{ font-size:10.5px; color:var(--red); background:none; border:none; cursor:pointer; text-decoration:underline; padding:0; margin-top:4px; display:inline-block; }
+  .btn-trocar-defeito{ font-size:10.5px; color:var(--teal); background:none; border:none; cursor:pointer; text-decoration:underline; padding:0; margin-top:4px; display:inline-block; }
+  .op-progress-banner{ background:var(--bg-panel); border:1px solid var(--border-strong); border-left:4px solid var(--border-strong); border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:13px; }
 
   .confirm-panel{
     background:var(--bg-panel); border:1px solid var(--border-strong); border-radius:12px;
@@ -512,6 +515,29 @@
     </div>
   </div>
 
+  <div class="confirm-panel" id="trocarDefeitoPanel" style="display:none;">
+    <div class="confirm-produto" id="trocarDefeitoPecaInfo" style="display:block;"></div>
+    <div class="scan-hint" style="margin-bottom:10px;">Corrige a classificação de um defeito já lançado (ex: cartão errado bipado por engano). O registro da peça continua o mesmo, sem duplicar — só o defeito/causa mudam, e o motivo fica salvo no histórico dela.</div>
+    <div class="field">
+      <label>Defeito correto</label>
+      <input type="text" id="trocarDefeitoTipo" placeholder="Escreva o defeito correto">
+    </div>
+    <div class="field">
+      <label>Causa raiz correta</label>
+      <input type="text" id="trocarDefeitoCausa" placeholder="Escreva a causa raiz correta">
+    </div>
+    <div class="field">
+      <label>Justificativa da alteração (obrigatória)</label>
+      <textarea id="trocarDefeitoJustificativa" rows="2" placeholder="Por que está corrigindo esta classificação?"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn-cancel" id="btnTrocarDefeitoCancelar" type="button">Cancelar</button>
+      <button class="btn-save" id="btnTrocarDefeitoSalvar" type="button" style="flex:1;">Salvar alteração</button>
+    </div>
+  </div>
+
+  <div class="op-progress-banner" id="opProgressBanner" style="display:none;"></div>
+
   <div class="cards" id="cards"></div>
 
   <div class="filter-row">
@@ -542,21 +568,9 @@
 <div id="consertoView" style="display:none;">
 
   <div class="scan-box">
-    <label>Bipar peça para iniciar avaliação de conserto</label>
+    <label>Bipar peça / componente do conserto</label>
     <input type="text" id="consertoScanInput" class="scan-input" placeholder="Bipe o código de série..." autocomplete="off">
-    <div class="scan-hint">Busca automaticamente o defeito pendente daquele serial. Se não houver conserto pendente, avisa.</div>
-  </div>
-
-  <div class="scan-box" id="componenteExternoBox" style="display:none;">
-    <label>Componente recebido de outra unidade (ex: driver da Iluminação)</label>
-    <input type="text" id="componenteExternoScanInput" class="scan-input" placeholder="Bipe o serial do componente recebido..." autocomplete="off">
-    <div class="scan-hint">Use isto pra confirmar o recebimento e registrar o conserto de um componente que chegou fisicamente de outra unidade — não é um serial bipado por aqui antes.</div>
-  </div>
-
-  <div class="scan-box" id="confirmarRecebimentoBox" style="display:none;">
-    <label>Confirmar recebimento de driver consertado</label>
-    <input type="text" id="confirmarRecebimentoScanInput" class="scan-input" placeholder="Bipe o serial do driver que retornou..." autocomplete="off">
-    <div class="scan-hint">Bipe o driver quando ele voltar fisicamente da Eletrônica já consertado, pra confirmar o recebimento e liberar a peça pra remontagem/reteste.</div>
+    <div class="scan-hint" id="consertoScanHint">Um campo só pra tudo: identifica sozinho se é peça pendente de avaliação, componente chegando de outra unidade, ou driver retornando consertado.</div>
   </div>
 
   <div class="scan-box" id="consertoFormBox" style="display:none;">
@@ -823,7 +837,7 @@
 
   <div class="scan-box no-print">
     <label>Baralho de cartões de defeito (QR code)</label>
-    <div class="scan-hint" style="margin-bottom:14px;">Monte um baralho com os defeitos mais frequentes da bancada. Por padrão, cada item gera um cartão de <b>frente e verso</b>: a <b>frente</b> (borda clara) já conserta a peça na hora com a causa raiz gravada; o <b>verso</b> (borda escura, mesma cor do defeito) encaminha pra fila de conserto pra investigar melhor a causa — imprima os dois lados, corte e cole-os costa a costa (ou plastifique junto) pra virar um cartão físico só. Pra defeitos que nunca são consertados na hora (ex: em curto, não parametriza), use "Só encaminhar pra conserto" abaixo — gera um único cartão já no visual de encaminhamento, sem precisar de causa raiz. Cada defeito recebe automaticamente uma cor própria, sempre a mesma. O cartão preto ✎ EDIÇÃO MANUAL (fixo, sempre impresso junto) é universal pras duas unidades — bipe-o com a peça pendente pra escrever defeito e causa na hora; ele lembra o último texto digitado por unidade até você editar de novo.</div>
+    <div class="scan-hint" style="margin-bottom:14px;">Monte um baralho com os defeitos mais frequentes da bancada. Por padrão, cada item gera um cartão de <b>frente e verso</b>: a <b>frente</b> (borda clara) já conserta a peça na hora com a causa raiz gravada; o <b>verso</b> (borda escura, mesma cor do defeito) encaminha pra fila de conserto pra investigar melhor a causa — imprima os dois lados, corte e cole-os costa a costa (ou plastifique junto) pra virar um cartão físico só. Pra defeitos que nunca são consertados na hora (ex: em curto, não parametriza), use "Só encaminhar pra conserto" abaixo — gera um único cartão já no visual de encaminhamento, sem precisar de causa raiz. Cada defeito recebe automaticamente uma cor própria, sempre a mesma. O cartão preto ✎ EDIÇÃO MANUAL (fixo, sempre impresso junto) também sai em frente e verso: a <b>frente</b> abre o formulário pra escrever defeito e causa na primeira vez — depois disso passa a aplicar esse mesmo texto direto, sem abrir formulário, nas próximas bipagens (padrão por unidade); o <b>verso</b> zera esse padrão, fazendo a próxima bipagem da frente voltar a abrir o formulário.</div>
   </div>
 
   <div class="scan-box no-print">
@@ -858,6 +872,29 @@
     </div>
 
     <button class="btn-secondary" id="btnImprimirCartoes" style="width:100%;">🖨 Imprimir baralho desta unidade</button>
+  </div>
+
+  <div class="scan-box no-print" id="cartaoManualConfigBox" style="border-color:#000;">
+    <label>✎ Padrão do cartão preto (edição manual) — <span id="cartaoManualConfigUnidadeLabel"></span></label>
+    <div class="scan-hint" style="margin-bottom:10px;">Depois de salvo aqui, bipar o cartão preto aplica esse defeito/causa direto na peça, sem abrir formulário nem pedir confirmação. Enquanto não tiver nada salvo, a primeira bipagem do cartão ainda abre o formulário pra você preencher (e aí já fica salvo como padrão pras próximas).</div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:10px;">
+      <div class="field" style="flex:1; min-width:170px; margin:0;">
+        <label>Defeito</label>
+        <input type="text" id="cartaoManualConfigDefeito" placeholder="Defeito padrão">
+      </div>
+      <div class="field" style="flex:1; min-width:170px; margin:0;">
+        <label>Causa raiz</label>
+        <input type="text" id="cartaoManualConfigCausa" placeholder="Causa raiz padrão">
+      </div>
+    </div>
+    <div class="toggle-row" style="margin-bottom:10px;">
+      <button class="toggle-btn active-yes" id="cartaoManualConfigAgora" type="button">Consertar agora</button>
+      <button class="toggle-btn" id="cartaoManualConfigConserto" type="button">Enviar para conserto</button>
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn-save" id="btnSalvarCartaoManualConfig" style="flex:1;">Salvar padrão</button>
+      <button class="btn-secondary" id="btnLimparCartaoManualConfig" style="flex:1;">Limpar (volta a pedir confirmação)</button>
+    </div>
   </div>
 
   <div id="cartoesGrid" class="cartoes-grid"></div>
@@ -3419,7 +3456,7 @@ document.addEventListener('mousedown', (e)=>{
    de caixa alta/baixa, e mantém tudo no mesmo padrão visual do resto do app (que já usa
    maiúsculas nos defeitos). Os campos de bipagem (scanner) ficam de fora — eles recebem o
    código exatamente como o leitor bipar, sem qualquer transformação. */
-const CAMPOS_SEM_MAIUSCULA_FORCADA = ['scanInput','scanCartaoInput','consertoScanInput','componenteExternoScanInput','confirmarRecebimentoScanInput','consertoComponenteSerial','consertoDriverSubstituto','requisicaoDriverSerial'];
+const CAMPOS_SEM_MAIUSCULA_FORCADA = ['scanInput','scanCartaoInput','consertoScanInput','consertoComponenteSerial','consertoDriverSubstituto','requisicaoDriverSerial'];
 document.addEventListener('input', (e)=>{
   const el = e.target;
   if(!el || !el.matches || !el.matches('input[type="text"], input:not([type]), textarea')) return;
@@ -3694,6 +3731,109 @@ async function addRecord(rec){
   });
   pushParaFirestore(rec);
 }
+/* ===================== TROCAR CLASSIFICAÇÃO DE UM DEFEITO JÁ LANÇADO =====================
+   Corrige o defeito/causa de um registro que já está como DEFEITO (ex: bipou o cartão errado
+   por engano) — sem apagar nem duplicar o registro, e sem mexer no status de conserto. Exige
+   uma justificativa, que fica guardada (com o defeito/causa anteriores) no próprio registro da
+   peça, formando um histórico de correções — igual o "cartão de defeito" mudar de significado
+   depois não deve alterar o que já foi lançado, essa troca também é sempre uma ação explícita e
+   registrada, nunca silenciosa. */
+let trocarDefeitoTargetId = null;
+async function abrirTrocarDefeito(id){
+  const all = await getAllRecords();
+  const rec = all.find(r=>r.id===id);
+  if(!rec){ showToast('Registro não encontrado'); return; }
+  if(rec.tipo !== 'DEFEITO'){ showToast('Essa peça não está registrada com defeito'); return; }
+  trocarDefeitoTargetId = id;
+  document.getElementById('trocarDefeitoPecaInfo').innerHTML = `<b>Serial ${escapeHtml(rec.serial)}</b> · OP ${escapeHtml(rec.op||'–')} · ${escapeHtml(rec.unidade||'–')}<br>Classificação atual: <b>${escapeHtml(rec.defeito||'–')}</b>${rec.causa ? ' — '+escapeHtml(rec.causa) : ''}`;
+  document.getElementById('trocarDefeitoTipo').value = rec.defeito || '';
+  document.getElementById('trocarDefeitoCausa').value = rec.causa || '';
+  document.getElementById('trocarDefeitoJustificativa').value = '';
+  document.getElementById('trocarDefeitoPanel').style.display = 'block';
+  document.getElementById('trocarDefeitoPanel').scrollIntoView({behavior:'smooth', block:'center'});
+}
+async function trocarClassificacaoDefeito(id, novoDefeito, novaCausa, justificativa){
+  const all = await getAllRecords();
+  const rec = all.find(r=>r.id===id);
+  if(!rec){ showToast('Registro não encontrado'); return; }
+  const historico = rec.historicoAlteracoesClasse ? rec.historicoAlteracoesClasse.slice() : [];
+  historico.push({
+    quando: new Date().toISOString(),
+    operador: currentUser,
+    defeitoAnterior: rec.defeito,
+    causaAnterior: rec.causa,
+    defeitoNovo: novoDefeito,
+    causaNova: novaCausa,
+    justificativa,
+  });
+  await updateRecord(id, {
+    defeito: novoDefeito,
+    causa: novaCausa,
+    historicoAlteracoesClasse: historico,
+  });
+  showToast('Classificação do defeito alterada — motivo registrado no histórico da peça');
+  refreshVisaoAtual();
+}
+document.getElementById('btnTrocarDefeitoCancelar').addEventListener('click', ()=>{
+  trocarDefeitoTargetId = null;
+  document.getElementById('trocarDefeitoPanel').style.display = 'none';
+});
+document.getElementById('btnTrocarDefeitoSalvar').addEventListener('click', async ()=>{
+  if(!trocarDefeitoTargetId) return;
+  const novoDefeito = document.getElementById('trocarDefeitoTipo').value.trim();
+  const novaCausa = document.getElementById('trocarDefeitoCausa').value.trim();
+  const justificativa = document.getElementById('trocarDefeitoJustificativa').value.trim();
+  if(!novoDefeito){ showToast('Escreva o defeito correto'); return; }
+  if(!justificativa){ showToast('A justificativa é obrigatória'); return; }
+  await trocarClassificacaoDefeito(trocarDefeitoTargetId, novoDefeito, novaCausa, justificativa);
+  trocarDefeitoTargetId = null;
+  document.getElementById('trocarDefeitoPanel').style.display = 'none';
+});
+
+/* ===================== REMOÇÃO DE DEFEITO (acesso restrito por senha) =====================
+   Desfaz o lançamento de um defeito, sem apagar o registro da peça: ela simplesmente volta a
+   valer como OK, mantendo o histórico/serial intactos. Fica atrás de uma senha fixa pra
+   centralizar essa ação em pessoas-chave, já que reverter um defeito afeta indicador de
+   qualidade e a fila de conserto. */
+const SENHA_REMOVER_DEFEITO = 'adm26';
+async function removerDefeitoLancado(id){
+  const senha = prompt('Senha para remover este defeito:');
+  if(senha === null) return; // cancelado
+  if(senha !== SENHA_REMOVER_DEFEITO){
+    showToast('Senha incorreta — remoção não realizada');
+    return;
+  }
+  const all = await getAllRecords();
+  const rec = all.find(r=>r.id===id);
+  if(!rec){ showToast('Registro não encontrado'); return; }
+  if(!confirm('Remover o defeito "'+(rec.defeito||'')+'" desta peça (serial '+rec.serial+')? A peça volta a valer como OK.')) return;
+  await updateRecord(id, {
+    tipo: 'OK',
+    defeitoRemovidoDe: rec.defeito,
+    defeitoRemovidoCausaDe: rec.causa,
+    defeitoRemovidoEm: new Date().toISOString(),
+    defeitoRemovidoPor: currentUser,
+    defeito: null,
+    causa: null,
+    consertado: null,
+    statusConserto: null,
+    consertoOperador: null,
+    consertoTimestamp: null,
+    encaminhadoParaUnidade: null,
+    componenteCulpadoSerial: null,
+    componenteCulpadoUnidade: null,
+    componenteConsertoStatus: null,
+    componenteConsertoCausa: null,
+    componenteRecebidoConfirmado: null,
+    retesteAprovado: null,
+    retesteData: null,
+    retesteOperador: null,
+    ciclosDefeito: 1,
+  });
+  showToast('Defeito removido — peça voltou a valer como OK');
+  refreshVisaoAtual();
+}
+
 async function updateRecord(id, patch){
   const db = await dbPromise;
   let recAtualizado = null;
@@ -4039,6 +4179,14 @@ async function saveOkFromPending(p){
    (duplicidade/divergência) — os dois campos fazem exatamente a mesma coisa, só mudam onde o
    operador pode bipar sem precisar tocar em nada na tela. */
 async function processarLeituraScan(raw){
+  /* Verso do cartão preto: zera o padrão salvo (defeito/causa/desfecho) da unidade atual, sem
+     depender de ter uma peça pendente — funciona bipado a qualquer momento. Depois disso, a
+     próxima bipagem do lado FRENTE volta a abrir o formulário em vez de aplicar direto. */
+  if(raw === CARTAO_MANUAL_RESET_CODIGO){
+    zerarPadraoCartaoManual();
+    return;
+  }
+
   /* Se há uma peça aguardando (dentro da janela de graça pós-OK, ou parada no painel de
      confirmação por duplicidade/divergência) e o que acabou de ser bipado é um cartão de
      defeito (QR), aplica o defeito direto nela — essa é a "2ª bipagem" do fluxo de cartões,
@@ -4319,6 +4467,7 @@ function montarCodigoCartao(unidade, desfecho, defeito, causa){
   return 'DEFCARD|'+CARTAO_UNIDADE_CODE[unidade]+'|'+desfecho+'|'+defeito+'|'+(causa||'');
 }
 const CARTAO_MANUAL_CODIGO = 'DEFCARD|MANUAL';
+const CARTAO_MANUAL_RESET_CODIGO = 'DEFCARD|MANUAL|RESET';
 
 /* Reconhece um código de cartão de defeito bipado e confere se ele corresponde a um cartão
    que realmente existe no baralho salvo daquela unidade — não só se defeito/causa "fazem
@@ -4476,16 +4625,60 @@ function refreshCartoesDefeito(){
   const grid = document.getElementById('cartoesGrid');
   document.getElementById('cartoesEmptyState').style.display = lista.length ? 'none' : 'block';
   grid.innerHTML = renderCartaoManual() + lista.map((item, idx)=>renderCartaoItem(cartoesUnidadeAtual, item, idx)).join('');
+  populateCartaoManualConfigBox();
 }
+
+/* ===================== CONFIGURAÇÃO DO PADRÃO DO CARTÃO PRETO =====================
+   Deixa ver e editar, por unidade, o defeito/causa/desfecho que o cartão preto vai aplicar
+   direto (sem confirmação) da próxima vez que for bipado — sem precisar bipar o cartão pra
+   configurar ou reconfigurar. */
+let cartaoManualConfigDesfechoValue = 'agora';
+function populateCartaoManualConfigBox(){
+  document.getElementById('cartaoManualConfigUnidadeLabel').textContent = cartoesUnidadeAtual;
+  const memoria = getMemoriaCartaoManual()[cartoesUnidadeAtual] || {defeito:'',causa:'',desfecho:'agora'};
+  document.getElementById('cartaoManualConfigDefeito').value = memoria.defeito || '';
+  document.getElementById('cartaoManualConfigCausa').value = memoria.causa || '';
+  cartaoManualConfigDesfechoValue = memoria.desfecho || 'agora';
+  atualizarBotoesCartaoManualConfig();
+}
+function atualizarBotoesCartaoManualConfig(){
+  document.getElementById('cartaoManualConfigAgora').className = cartaoManualConfigDesfechoValue==='agora' ? 'toggle-btn active-yes' : 'toggle-btn';
+  document.getElementById('cartaoManualConfigConserto').className = cartaoManualConfigDesfechoValue==='conserto' ? 'toggle-btn active-yes' : 'toggle-btn';
+}
+document.getElementById('cartaoManualConfigAgora').addEventListener('click', ()=>{ cartaoManualConfigDesfechoValue='agora'; atualizarBotoesCartaoManualConfig(); });
+document.getElementById('cartaoManualConfigConserto').addEventListener('click', ()=>{ cartaoManualConfigDesfechoValue='conserto'; atualizarBotoesCartaoManualConfig(); });
+
+document.getElementById('btnSalvarCartaoManualConfig').addEventListener('click', ()=>{
+  const defeito = document.getElementById('cartaoManualConfigDefeito').value.trim();
+  const causa = document.getElementById('cartaoManualConfigCausa').value.trim();
+  const isAgora = cartaoManualConfigDesfechoValue==='agora';
+  if(!defeito){ showToast('Escreva o defeito'); return; }
+  if(isAgora && !causa){ showToast('Escreva a causa raiz (ou mude pra "Enviar para conserto")'); return; }
+  saveMemoriaCartaoManual(cartoesUnidadeAtual, defeito, isAgora ? causa : '', cartaoManualConfigDesfechoValue);
+  showToast('Padrão do cartão preto salvo — próximas bipagens já aplicam direto');
+});
+document.getElementById('btnLimparCartaoManualConfig').addEventListener('click', ()=>{
+  if(!confirm('Limpar o padrão do cartão preto para '+cartoesUnidadeAtual+'? A próxima bipagem volta a abrir o formulário.')) return;
+  saveMemoriaCartaoManual(cartoesUnidadeAtual, '', '', 'agora');
+  populateCartaoManualConfigBox();
+  showToast('Padrão limpo — próxima bipagem do cartão preto abre o formulário de novo');
+});
 
 /* Cartão fixo, universal (não depende da unidade) e sem botão de remover — sempre aparece
    junto dos outros dentro da grade, então entra na impressão normalmente com o resto. */
 function renderCartaoManual(){
   return `<div class="cartao-par">
     <div class="cartao-defeito cartao-manual">
+      <div class="cartao-lado-tag">FRENTE</div>
       <div class="cartao-qr">${gerarQrSvg(CARTAO_MANUAL_CODIGO)}</div>
       <div class="cartao-defeito-nome">✎ EDIÇÃO MANUAL</div>
       <div class="cartao-causa-nome">defeito + causa na hora</div>
+    </div>
+    <div class="cartao-defeito cartao-manual">
+      <div class="cartao-lado-tag">VERSO</div>
+      <div class="cartao-qr">${gerarQrSvg(CARTAO_MANUAL_RESET_CODIGO)}</div>
+      <div class="cartao-defeito-nome">🔄 ZERAR PADRÃO SALVO</div>
+      <div class="cartao-encaminhar-aviso" style="font-size:10.5px;">VOLTA A PEDIR CONFIRMAÇÃO</div>
     </div>
   </div>`;
 }
@@ -4540,18 +4733,42 @@ document.getElementById('btnImprimirCartoes').addEventListener('click', ()=>{
    causa, só sinaliza "abra o formulário rápido". Lembra o último defeito/causa digitados por
    unidade (guardados até serem editados de novo), pra agilizar quando o mesmo caso se repete. */
 function getMemoriaCartaoManual(){
-  const padrao = { 'Iluminação':{defeito:'',causa:''}, 'Eletrônica':{defeito:'',causa:''} };
+  const padrao = { 'Iluminação':{defeito:'',causa:'',desfecho:'agora'}, 'Eletrônica':{defeito:'',causa:'',desfecho:'agora'} };
   try{
     const salvo = JSON.parse(localStorage.getItem('bipagem_cartao_manual_memoria') || 'null');
     if(salvo) return Object.assign(padrao, salvo);
   }catch(err){ /* dado corrompido — segue com memória vazia */ }
   return padrao;
 }
-function saveMemoriaCartaoManual(unidade, defeito, causa){
+function saveMemoriaCartaoManual(unidade, defeito, causa, desfecho){
   const memoria = getMemoriaCartaoManual();
-  memoria[unidade] = { defeito, causa };
+  memoria[unidade] = { defeito, causa, desfecho: desfecho || 'agora' };
   localStorage.setItem('bipagem_cartao_manual_memoria', JSON.stringify(memoria));
   pushConfigParaFirestore('bipagem_cartao_manual_memoria');
+}
+/* Um padrão conta como "configurado" (aplica direto, sem confirmação) quando tem defeito
+   preenchido — e, se o desfecho for "consertar agora", também precisa da causa raiz (o lado
+   "encaminhar pra conserto" não exige causa, igual aos cartões impressos). */
+function memoriaCartaoManualConfigurada(memoria){
+  if(!memoria || !memoria.defeito) return false;
+  return memoria.desfecho==='conserto' || !!memoria.causa;
+}
+
+/* Bipado a partir do verso do cartão preto — zera o padrão da unidade em uso no momento (a
+   peça pendente, se houver, senão a unidade selecionada nesta tela de bipagem). */
+function zerarPadraoCartaoManual(){
+  const unidade = (pending && pending.unidade) || currentUnidadeLinha;
+  if(!unidade){
+    showToast('Selecione uma unidade antes de zerar o padrão do cartão preto');
+    return;
+  }
+  saveMemoriaCartaoManual(unidade, '', '', 'agora');
+  const viewCartoes = document.getElementById('cartoesDefeitoView');
+  if(viewCartoes && viewCartoes.style.display !== 'none' && cartoesUnidadeAtual === unidade){
+    populateCartaoManualConfigBox();
+  }
+  playAlertSound();
+  showToast('🔄 Padrão do cartão preto zerado para '+unidade+' — próxima bipagem abre o formulário');
 }
 
 let cartaoManualPecaPendente = null;
@@ -4560,16 +4777,40 @@ let cartaoManualDesfechoValue = 'agora'; // 'agora' | 'conserto'
 function abrirCartaoManual(pecaPendente){
   cartaoManualPecaPendente = pecaPendente;
   clearPendingOkTimer();
+  const memoria = getMemoriaCartaoManual()[pecaPendente.unidade] || {defeito:'',causa:'',desfecho:'agora'};
+
+  /* Já tem um padrão salvo pra essa unidade — aplica direto na peça, sem abrir formulário nem
+     pedir confirmação (é exatamente esse o ponto do cartão preto depois de configurado). */
+  if(memoriaCartaoManualConfigurada(memoria)){
+    confirmPanel.classList.remove('show');
+    defeitoForm.classList.remove('show');
+    aplicarCartaoManualDireto(pecaPendente, memoria);
+    return;
+  }
+
+  /* Primeira vez (ou padrão foi limpo) — abre o formulário normal pra preencher; salvar aqui
+     também grava como padrão, então da próxima vez em diante já aplica direto. */
   confirmPanel.classList.remove('show');
   defeitoForm.classList.remove('show');
-  const memoria = getMemoriaCartaoManual()[pecaPendente.unidade] || {defeito:'',causa:''};
   document.getElementById('cartaoManualPecaInfo').textContent = 'Peça ' + pecaPendente.serial + ' · OP ' + (pecaPendente.op||'–') + ' · ' + pecaPendente.unidade;
   document.getElementById('cartaoManualDefeito').value = memoria.defeito;
   document.getElementById('cartaoManualCausa').value = memoria.causa;
-  cartaoManualDesfechoValue = 'agora';
+  cartaoManualDesfechoValue = memoria.desfecho || 'agora';
   atualizarBotoesCartaoManual();
   document.getElementById('cartaoManualPanel').style.display = 'block';
   document.getElementById('cartaoManualPanel').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+async function aplicarCartaoManualDireto(pecaPendente, memoria){
+  const isAgora = (memoria.desfecho || 'agora') === 'agora';
+  await salvarRegistroDefeito(memoria.defeito, isAgora ? memoria.causa : null, isAgora ? true : null, isAgora ? null : 'pendente', isAgora);
+  cartaoManualPecaPendente = null;
+  playAlertSound();
+  showToast(isAgora
+    ? '🏷 Defeito registrado via cartão preto (padrão) · '+memoria.defeito+' — '+memoria.causa
+    : '🏷 Defeito registrado via cartão preto (padrão) · '+memoria.defeito+' — encaminhado para conserto');
+  focusScan();
+  refresh();
 }
 function atualizarBotoesCartaoManual(){
   document.getElementById('cartaoManualAgora').className = cartaoManualDesfechoValue==='agora' ? 'toggle-btn active-yes' : 'toggle-btn';
@@ -4589,10 +4830,10 @@ document.getElementById('btnCartaoManualSalvar').addEventListener('click', async
   if(!cartaoManualPecaPendente) return;
   const defeito = document.getElementById('cartaoManualDefeito').value.trim();
   const causa = document.getElementById('cartaoManualCausa').value.trim();
-  if(!defeito){ showToast('Escreva o defeito'); return; }
-  if(!causa){ showToast('Escreva a causa raiz'); return; }
-  saveMemoriaCartaoManual(cartaoManualPecaPendente.unidade, defeito, causa);
   const isAgora = cartaoManualDesfechoValue==='agora';
+  if(!defeito){ showToast('Escreva o defeito'); return; }
+  if(isAgora && !causa){ showToast('Escreva a causa raiz'); return; }
+  saveMemoriaCartaoManual(cartaoManualPecaPendente.unidade, defeito, causa, cartaoManualDesfechoValue);
   await salvarRegistroDefeito(defeito, isAgora ? causa : null, isAgora ? true : null, isAgora ? null : 'pendente', isAgora);
   document.getElementById('cartaoManualPanel').style.display = 'none';
   cartaoManualPecaPendente = null;
@@ -4845,8 +5086,14 @@ document.getElementById('btnConsertoRetomar').addEventListener('click', resumeCo
 
 async function refreshConsertoFila(){
   document.getElementById('btnConsertoEncaminhado').style.display = currentUnidadeLinha==='Iluminação' ? 'inline-block' : 'none';
-  document.getElementById('componenteExternoBox').style.display = currentUnidadeLinha==='Eletrônica' ? 'block' : 'none';
-  document.getElementById('confirmarRecebimentoBox').style.display = currentUnidadeLinha==='Iluminação' ? 'block' : 'none';
+  const hintEl = document.getElementById('consertoScanHint');
+  if(currentUnidadeLinha==='Eletrônica'){
+    hintEl.textContent = 'Busca o defeito pendente daquele serial. Se não houver conserto pendente aqui, trata como componente recebido de outra unidade (ex: driver da Iluminação) pra avaliar.';
+  } else if(currentUnidadeLinha==='Iluminação'){
+    hintEl.textContent = 'Busca o defeito pendente daquele serial. Se não houver conserto pendente aqui, procura um driver que tenha retornado consertado da Eletrônica pra confirmar o recebimento.';
+  } else {
+    hintEl.textContent = 'Busca automaticamente o defeito pendente daquele serial. Se não houver conserto pendente, avisa.';
+  }
   const all = await getAllRecords();
   const pendentes = all.filter(r=>r.statusConserto==='pendente' && r.unidade===currentUnidadeLinha).sort((a,b)=>a.timestamp.localeCompare(b.timestamp));
   const tbody = document.getElementById('consertoFilaBody');
@@ -4981,6 +5228,12 @@ async function loadConsertoRecord(id){
   resumeConsertoTimer();
 }
 
+/* Campo único do Conserto: bipa qualquer serial e o app decide sozinho o que fazer com ele,
+   nessa ordem — 1) peça com conserto pendente aqui mesmo (caso mais comum); 2) se a unidade for
+   Eletrônica, componente que chegou fisicamente de outra unidade pra avaliar; 3) se a unidade
+   for Iluminação, driver que retornou consertado da Eletrônica, pra confirmar o recebimento.
+   Substitui os três campos separados que existiam antes — o operador não precisa mais escolher
+   qual campo bipar, o serial já indica sozinho de qual caso se trata. */
 document.getElementById('consertoScanInput').addEventListener('keydown', async (e)=>{
   if(e.key !== 'Enter') return;
   const raw = e.target.value;
@@ -4988,43 +5241,45 @@ document.getElementById('consertoScanInput').addEventListener('keydown', async (
   if(!raw.trim()) return;
   const parsed = parseSerial(raw);
   const serial = parsed ? parsed.serial : onlyDigits(raw);
+
+  // 1) peça com conserto pendente nesta unidade
   const all = await getAllRecords();
   const match = all.find(r=>r.serial===serial && r.statusConserto==='pendente');
-  if(!match){ showToast('Nenhum conserto pendente para este serial'); return; }
-  loadConsertoRecord(match.id);
-});
+  if(match){ loadConsertoRecord(match.id); return; }
 
-document.getElementById('componenteExternoScanInput').addEventListener('keydown', async (e)=>{
-  if(e.key !== 'Enter') return;
-  const raw = e.target.value;
-  e.target.value = '';
-  if(!raw.trim()) return;
-  await iniciarConsertoComponenteExterno(raw, null);
-});
+  if(!parsed){ showToast('Nenhum conserto pendente para este serial'); return; }
 
-document.getElementById('confirmarRecebimentoScanInput').addEventListener('keydown', async (e)=>{
-  if(e.key !== 'Enter') return;
-  const raw = e.target.value;
-  e.target.value = '';
-  if(!raw.trim()) return;
-  const parsed = parseSerial(raw);
-  if(!parsed){ showToast('Código inválido — bipe novamente'); return; }
-  const locais = (await getAllRecords()).sort((a,b)=>b.timestamp.localeCompare(a.timestamp));
-  const alvo = locais.find(r=>r.componenteCulpadoSerial===parsed.serial && r.componenteConsertoStatus && !r.componenteRecebidoConfirmado);
-  if(!alvo){
-    const jaConfirmado = locais.find(r=>r.componenteCulpadoSerial===parsed.serial && r.componenteRecebidoConfirmado);
-    if(jaConfirmado){ showToast('Este driver já teve o recebimento confirmado antes'); return; }
-    showToast('Nenhuma peça aguardando recebimento desse driver — confira se o conserto na Eletrônica já foi concluído');
+  // 2) Eletrônica: componente recebido fisicamente de outra unidade pra avaliar
+  if(currentUnidadeLinha==='Eletrônica'){
+    await iniciarConsertoComponenteExterno(raw, null);
     return;
   }
-  await updateRecord(alvo.id, {
-    componenteRecebidoConfirmado: true,
-    componenteRecebidoData: new Date().toISOString(),
-    componenteRecebidoOperador: currentUser,
-  });
-  showToast('Recebimento confirmado — peça pronta pra remontagem/reteste');
-  refresh();
-  refreshConsertoFila();
+
+  // 3) Iluminação: confirmar recebimento de um driver que retornou consertado da Eletrônica
+  if(currentUnidadeLinha==='Iluminação'){
+    const locais = all.slice().sort((a,b)=>b.timestamp.localeCompare(a.timestamp));
+    const alvo = locais.find(r=>r.componenteCulpadoSerial===parsed.serial && r.componenteConsertoStatus && !r.componenteRecebidoConfirmado);
+    if(alvo){
+      await updateRecord(alvo.id, {
+        componenteRecebidoConfirmado: true,
+        componenteRecebidoData: new Date().toISOString(),
+        componenteRecebidoOperador: currentUser,
+        /* Libera o reteste: sem isso, o ciclo de "encaminhado" nunca fecha e a peça nunca
+           consegue ser confirmada como OK de novo na bipagem padrão (o botão "Peça OK" só
+           aparece quando statusConserto vira 'concluido'). O driver já voltou consertado e
+           confirmado fisicamente — esse é o ponto em que o conserto desta peça termina. */
+        statusConserto: 'concluido',
+      });
+      showToast('Recebimento confirmado — peça liberada pra reteste na bipagem padrão');
+      refresh();
+      refreshConsertoFila();
+      return;
+    }
+    const jaConfirmado = locais.find(r=>r.componenteCulpadoSerial===parsed.serial && r.componenteRecebidoConfirmado);
+    if(jaConfirmado){ showToast('Este driver já teve o recebimento confirmado antes'); return; }
+  }
+
+  showToast('Nenhum conserto pendente para este serial');
 });
 
 /* Cria (ou reabre, se já existir) o registro de conserto de um componente vindo de outra
@@ -5379,6 +5634,31 @@ async function refresh(){
     </div>
   `).join('');
 
+  /* Progresso de testagem da OP mais recente bipada nesta unidade — não é sobre certificado
+     (esse só existe pra Iluminação), é só um controle simples de "quantas peças distintas
+     dessa OP já passaram pelo teste", útil nas duas unidades. Usa a mesma base de OPs
+     (MPOP207) importada já usada no resto do app. */
+  const opBanner = document.getElementById('opProgressBanner');
+  const ultimoOp = all.length ? all.slice().sort((a,b)=>b.timestamp.localeCompare(a.timestamp))[0].op : null;
+  if(ultimoOp){
+    const opInfo = getOpDb()[ultimoOp];
+    const seriaisOp = new Set(all.filter(r=>r.op===ultimoOp).map(r=>r.serial));
+    const testadas = seriaisOp.size;
+    opBanner.style.display = 'block';
+    if(opInfo && opInfo.qp!=null){
+      const totalOp = opInfo.qp;
+      const faltam = Math.max(0, totalOp-testadas);
+      const completo = testadas>=totalOp;
+      opBanner.style.borderLeftColor = completo ? 'var(--teal)' : 'var(--border-strong)';
+      opBanner.innerHTML = `📦 <b>OP ${escapeHtml(ultimoOp)}</b> — ${testadas} de ${totalOp} peças testadas`+(completo ? ' <span style="color:var(--teal); font-weight:700;">✓ todas testadas</span>' : ' · faltam '+faltam);
+    } else {
+      opBanner.style.borderLeftColor = 'var(--border-strong)';
+      opBanner.innerHTML = `📦 <b>OP ${escapeHtml(ultimoOp)}</b> — ${testadas} peças testadas <span style="color:var(--text-faint);">(quantidade da OP não disponível — importe a base de OPs em Configurações pra ver o total)</span>`;
+    }
+  } else {
+    opBanner.style.display = 'none';
+  }
+
   const tbody = document.getElementById('tableBody');
   const emptyState = document.getElementById('emptyState');
   if(rows.length===0){
@@ -5404,12 +5684,24 @@ async function refresh(){
         <td>${r.op || '–'}</td>
         <td style="font-family:var(--font-mono); font-size:11px;">${r.serial || '–'}</td>
         <td>${statusBadge}</td>
-        <td>${r.defeito || '–'}${r.causa ? '<br><span style="color:var(--text-faint)">'+escapeHtml(r.causa)+'</span>' : ''}${r.ciclosDefeito>=2 ? '<br><span class="badge badge-defeito">⚠ '+r.ciclosDefeito+'º ciclo — reincidente</span>' : ''}${r.componenteConsertoStatus ? '<br><span style="color:var(--verde-escuro); font-weight:600;">Componente: '+escapeHtml(r.componenteConsertoStatus)+'</span>'+(r.componenteConsertoCausa ? ' <span style="color:var(--text-faint)">('+escapeHtml(r.componenteConsertoCausa)+')</span>' : '')+(r.componenteRecebidoConfirmado ? ' <span style="color:var(--teal);">· recebido de volta ✓</span>' : ' <span style="color:var(--amber);">· aguardando recebimento</span>') : ''}</td>
+        <td>${r.defeito || '–'}${r.causa ? '<br><span style="color:var(--text-faint)">'+escapeHtml(r.causa)+'</span>' : ''}${r.ciclosDefeito>=2 ? '<br><span class="badge badge-defeito">⚠ '+r.ciclosDefeito+'º ciclo — reincidente</span>' : ''}${r.componenteConsertoStatus ? '<br><span style="color:var(--verde-escuro); font-weight:600;">Componente: '+escapeHtml(r.componenteConsertoStatus)+'</span>'+(r.componenteConsertoCausa ? ' <span style="color:var(--text-faint)">('+escapeHtml(r.componenteConsertoCausa)+')</span>' : '')+(r.componenteRecebidoConfirmado ? ' <span style="color:var(--teal);">· recebido de volta ✓</span>' : ' <span style="color:var(--amber);">· aguardando recebimento</span>') : ''}${r.historicoAlteracoesClasse && r.historicoAlteracoesClasse.length ? '<br><span class="badge" style="background:var(--amber-dim); color:var(--amber);" title="'+escapeHtml(r.historicoAlteracoesClasse[r.historicoAlteracoesClasse.length-1].justificativa)+'">✎ classificação corrigida ('+r.historicoAlteracoesClasse.length+'x)</span>' : ''}${r.tipo==='DEFEITO' ? '<br><button class="btn-trocar-defeito" data-id="'+r.id+'" type="button">✎ Trocar defeito</button> · <button class="btn-remover-defeito" data-id="'+r.id+'" type="button">🔒 Remover defeito</button>' : ''}</td>
         <td>${consertadoTxt}</td>
       </tr>`;
     }).join('');
     tbody.querySelectorAll('.row-ok-clicavel').forEach(tr=>{
       tr.addEventListener('click', ()=>openReclassifyDefeito(tr.dataset.id));
+    });
+    tbody.querySelectorAll('.btn-remover-defeito').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        removerDefeitoLancado(btn.dataset.id);
+      });
+    });
+    tbody.querySelectorAll('.btn-trocar-defeito').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        abrirTrocarDefeito(btn.dataset.id);
+      });
     });
   }
 }
