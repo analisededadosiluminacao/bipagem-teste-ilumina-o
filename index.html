@@ -3381,12 +3381,18 @@ function iniciarListenerConfigFirestore(){
    evento no document, então funciona em qualquer campo, inclusive os que forem criados
    dinamicamente depois (relatórios, certificados, etc.). */
 function forcarTecladoVirtual(el){
-  if(!el || el.disabled || el.hasAttribute('readonly')) return;
-  if(document.activeElement === el) return;
+  if(!el || el.disabled) return;
   try{
+    const jaEstavaFocado = document.activeElement === el;
     el.setAttribute('readonly','readonly');
-    el.focus();
-    setTimeout(()=>{ el.removeAttribute('readonly'); }, 100);
+    if(jaEstavaFocado) el.blur();
+    setTimeout(()=>{
+      el.removeAttribute('readonly');
+      el.focus();
+      try{ el.click(); }catch(errClick){ /* alguns navegadores não permitem click() sintético — ignora */ }
+      const len = el.value ? el.value.length : 0;
+      if(el.setSelectionRange){ try{ el.setSelectionRange(len, len); }catch(errSel){} }
+    }, 60);
   }catch(err){ /* ignora — pior caso, comportamento fica como antes */ }
 }
 document.addEventListener('touchstart', (e)=>{
