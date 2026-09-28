@@ -4048,9 +4048,20 @@ async function processarLeituraScan(raw){
       abrirCartaoManual(pending);
       return;
     }
-    const card = parseDefCard(raw);
-    if(card && card.unidade === pending.unidade){
-      await aplicarCartaoDefeito(pending, card);
+    /* Todo código de cartão começa com "DEFCARD|" — trata esse caso à parte pra poder avisar
+       exatamente por que um cartão não foi aceito (unidade errada ou cartão removido do
+       baralho), em vez do genérico "código inválido" que não ajuda o operador a corrigir. */
+    if(raw.indexOf('DEFCARD|') === 0){
+      const card = parseDefCard(raw);
+      if(card && card.unidade === pending.unidade){
+        await aplicarCartaoDefeito(pending, card);
+        return;
+      }
+      if(card && card.unidade !== pending.unidade){
+        showToast('⚠ Esse cartão é de '+card.unidade+', mas a peça bipada é de '+pending.unidade+' — pegue o cartão da unidade certa');
+        return;
+      }
+      showToast('⚠ Cartão não reconhecido no baralho salvo aqui — pode ter sido removido/alterado. Use "Registrar defeito" pra lançar manualmente.');
       return;
     }
     if(pendingOkTimer){
@@ -4112,7 +4123,7 @@ async function processarLeituraScan(raw){
   defeitoForm.classList.remove('show');
   const scanCartaoInputEl = document.getElementById('scanCartaoInput');
   scanCartaoInputEl.value = '';
-  setTimeout(()=>{ scanCartaoInputEl.focus(); }, 30);
+  scanCartaoInputEl.focus();
   resetDefeitoForm();
 
   const confirmProduto = document.getElementById('confirmProduto');
