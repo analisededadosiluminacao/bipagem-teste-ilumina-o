@@ -127,6 +127,9 @@
   }
   .scan-input:focus{ border-color:var(--teal); }
   .scan-hint{ font-size:11px; color:var(--text-faint); margin-top:8px; }
+  .scan-box-cartao{ border-color:var(--teal); padding:14px 16px; }
+  .scan-box-cartao label{ color:var(--teal); font-weight:600; }
+  .scan-box-cartao .scan-input{ font-size:16px; padding:10px 12px; }
 
   .confirm-panel{
     background:var(--bg-panel); border:1px solid var(--border-strong); border-radius:12px;
@@ -437,6 +440,12 @@
       </div>
       <button class="btn-cancel" id="btnCancel">Cancelar</button>
     </div>
+
+    <div class="scan-box scan-box-cartao" id="scanCartaoBox" style="margin:12px 0;">
+      <label>🏷 Bipe a etiqueta de defeito (cartão) aqui — registra na hora, sem precisar dos botões abaixo</label>
+      <input type="text" id="scanCartaoInput" class="scan-input" placeholder="Aguardando leitura do cartão..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    </div>
+
     <div class="btn-row" id="confirmBtnRow">
       <button class="btn-ok" id="btnOk">✓ Peça OK</button>
       <button class="btn-defeito" id="btnDefeitoToggle">⚠ Registrar defeito</button>
@@ -3410,7 +3419,7 @@ document.addEventListener('mousedown', (e)=>{
    de caixa alta/baixa, e mantém tudo no mesmo padrão visual do resto do app (que já usa
    maiúsculas nos defeitos). Os campos de bipagem (scanner) ficam de fora — eles recebem o
    código exatamente como o leitor bipar, sem qualquer transformação. */
-const CAMPOS_SEM_MAIUSCULA_FORCADA = ['scanInput','consertoScanInput','componenteExternoScanInput','confirmarRecebimentoScanInput','consertoComponenteSerial','consertoDriverSubstituto','requisicaoDriverSerial'];
+const CAMPOS_SEM_MAIUSCULA_FORCADA = ['scanInput','scanCartaoInput','consertoScanInput','componenteExternoScanInput','confirmarRecebimentoScanInput','consertoComponenteSerial','consertoDriverSubstituto','requisicaoDriverSerial'];
 document.addEventListener('input', (e)=>{
   const el = e.target;
   if(!el || !el.matches || !el.matches('input[type="text"], input:not([type]), textarea')) return;
@@ -4025,12 +4034,11 @@ async function saveOkFromPending(p){
   });
 }
 
-scanInput.addEventListener('keydown', async (e)=>{
-  if(e.key !== 'Enter') return;
-  const raw = scanInput.value.trim();
-  scanInput.value = '';
-  if(!raw) return;
-
+/* Processa uma leitura (código de peça, cartão de defeito ou cartão de edição manual), venha ela
+   do campo principal de bipagem ou do campo de cartão que aparece dentro do painel de confirmação
+   (duplicidade/divergência) — os dois campos fazem exatamente a mesma coisa, só mudam onde o
+   operador pode bipar sem precisar tocar em nada na tela. */
+async function processarLeituraScan(raw){
   /* Se há uma peça aguardando (dentro da janela de graça pós-OK, ou parada no painel de
      confirmação por duplicidade/divergência) e o que acabou de ser bipado é um cartão de
      defeito (QR), aplica o defeito direto nela — essa é a "2ª bipagem" do fluxo de cartões,
@@ -4102,6 +4110,9 @@ scanInput.addEventListener('keydown', async (e)=>{
   document.getElementById('confirmBtnRow').style.display = 'flex';
   confirmPanel.classList.add('show');
   defeitoForm.classList.remove('show');
+  const scanCartaoInputEl = document.getElementById('scanCartaoInput');
+  scanCartaoInputEl.value = '';
+  setTimeout(()=>{ scanCartaoInputEl.focus(); }, 30);
   resetDefeitoForm();
 
   const confirmProduto = document.getElementById('confirmProduto');
@@ -4143,6 +4154,23 @@ scanInput.addEventListener('keydown', async (e)=>{
     btnOkEl.style.display = 'inline-block';
     dupWarning.style.display = 'none';
   }
+}
+
+scanInput.addEventListener('keydown', async (e)=>{
+  if(e.key !== 'Enter') return;
+  const raw = scanInput.value.trim();
+  scanInput.value = '';
+  if(!raw) return;
+  await processarLeituraScan(raw);
+});
+
+const scanCartaoInput = document.getElementById('scanCartaoInput');
+scanCartaoInput.addEventListener('keydown', async (e)=>{
+  if(e.key !== 'Enter') return;
+  const raw = scanCartaoInput.value.trim();
+  scanCartaoInput.value = '';
+  if(!raw) return;
+  await processarLeituraScan(raw);
 });
 
 document.getElementById('btnCancel').addEventListener('click', ()=>{
