@@ -340,8 +340,8 @@
   .cartoes-grid{ display:flex; flex-wrap:wrap; gap:18px; margin-top:16px; align-items:flex-start; }
   .cartao-par{ display:flex; flex-direction:column; align-items:center; gap:8px; background:var(--bg-panel); border-radius:12px; padding:10px; }
   .cartao-par .cartao-defeito + .cartao-defeito{ margin-top:0; }
-  .cartao-defeito{ background:#fff; border:3px solid var(--border); border-radius:12px; padding:14px 10px 10px; text-align:center; break-inside:avoid; width:160px; position:relative; }
-  .cartao-lado-tag{ position:absolute; top:6px; left:8px; font-size:9px; letter-spacing:.5px; color:#999; font-weight:700; }
+  .cartao-defeito{ background:#fff; border:9px solid var(--border); border-radius:14px; padding:14px 10px 10px; text-align:center; break-inside:avoid; width:170px; position:relative; }
+  .cartao-lado-tag{ position:absolute; top:6px; left:10px; font-size:9px; letter-spacing:.5px; color:#999; font-weight:700; }
   .cartao-qr{ line-height:0; margin-top:10px; }
   .cartao-qr svg{ width:100%; height:auto; max-width:150px; }
   .cartao-defeito-nome{ font-weight:700; margin-top:8px; font-size:12.5px; color:#111; }
@@ -358,7 +358,7 @@
     .relatorio-familia{ break-inside:avoid; }
     .cartoes-grid{ display:flex; flex-wrap:wrap; }
     .cartao-par{ background:#fff; break-inside:avoid; }
-    .cartao-defeito{ border-width:3px !important; border-style:solid !important; }
+    .cartao-defeito{ border-width:9px !important; border-style:solid !important; }
     .cartao-lado-tag{ color:#bbb; }
   }
 
@@ -4254,14 +4254,30 @@ function gerarQrSvg(texto){
   return qr.createSvgTag({ cellSize:4, margin:8, scalable:true });
 }
 
-/* Uma cor por defeito (hash determinístico do texto → matiz HSL), sempre a mesma pra um mesmo
-   texto de defeito — a frente do cartão usa um tom claro dessa cor, o verso um tom escuro. A
-   cor fica só na borda (fundo do cartão continua branco). */
-function corDefeito(defeito){
-  let hash = 0;
-  for(let i=0;i<defeito.length;i++){ hash = (hash*31 + defeito.charCodeAt(i)) % 360; }
-  const hue = Math.abs(hash);
-  return { clara: `hsl(${hue}, 65%, 82%)`, escura: `hsl(${hue}, 70%, 32%)` };
+/* Uma cor por defeito, sem repetir: cada defeito novo (por unidade) recebe o próximo índice
+   livre, guardado permanentemente — nunca muda depois, mesmo se outros defeitos forem
+   adicionados/removidos do baralho. O matiz de cada índice usa o "ângulo dourado" (~137,5°),
+   que espalha as cores no máximo possível ao redor do círculo — assim, ainda que existam
+   muitos defeitos, duas cores vizinhas nunca ficam parecidas. A frente do cartão usa um tom
+   claro dessa cor, o verso um tom escuro. A cor fica só na borda (fundo continua branco). */
+function getMapaCorDefeito(){
+  const padrao = { 'Iluminação':{}, 'Eletrônica':{} };
+  try{
+    const salvo = JSON.parse(localStorage.getItem('bipagem_cor_indice_defeito') || 'null');
+    if(salvo) return Object.assign(padrao, salvo);
+  }catch(err){ /* dado corrompido — segue do zero */ }
+  return padrao;
+}
+function corDefeito(unidade, defeito){
+  const mapa = getMapaCorDefeito();
+  if(!mapa[unidade]) mapa[unidade] = {};
+  if(!(defeito in mapa[unidade])){
+    mapa[unidade][defeito] = Object.keys(mapa[unidade]).length;
+    localStorage.setItem('bipagem_cor_indice_defeito', JSON.stringify(mapa));
+  }
+  const idx = mapa[unidade][defeito];
+  const hue = Math.round((idx * 137.508) % 360);
+  return { clara: `hsl(${hue}, 68%, 80%)`, escura: `hsl(${hue}, 72%, 30%)` };
 }
 
 function populateCartaoNovoSelects(){
@@ -4320,7 +4336,7 @@ document.getElementById('btnCartaoModoSoVerso').addEventListener('click', ()=>{ 
    investigar). Item "so_verso" (defeito sem opção de consertar na hora): só o cartão escuro,
    direto pro desfecho de conserto. O aviso "ENCAMINHAR PARA CONSERTO" é sempre vermelho. */
 function renderCartaoItem(unidade, item, idx){
-  const cor = corDefeito(item.defeito);
+  const cor = corDefeito(unidade, item.defeito);
   const ehDuplo = item.duplo !== false;
   const codigoVerso = montarCodigoCartao(unidade, 'CONSERTO', item.defeito, '');
   const cardVerso = `<div class="cartao-defeito" style="border-color:${cor.escura};">
