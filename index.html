@@ -814,7 +814,7 @@
 
   <div class="scan-box no-print">
     <label>Baralho de cartões de defeito (QR code)</label>
-    <div class="scan-hint" style="margin-bottom:14px;">Monte um baralho com os defeitos mais frequentes da bancada. Cada item do baralho gera um cartão de <b>frente e verso</b>: a <b>frente</b> (borda clara) já conserta a peça na hora com a causa raiz gravada; o <b>verso</b> (borda escura, mesma cor do defeito) encaminha pra fila de conserto pra investigar melhor a causa, sem precisar tocar em nada na tela — imprima os dois lados, corte e cole-os costa a costa (ou plastifique junto) pra virar um cartão físico só. Cada defeito recebe automaticamente uma cor própria, sempre a mesma.</div>
+    <div class="scan-hint" style="margin-bottom:14px;">Monte um baralho com os defeitos mais frequentes da bancada. Por padrão, cada item gera um cartão de <b>frente e verso</b>: a <b>frente</b> (borda clara) já conserta a peça na hora com a causa raiz gravada; o <b>verso</b> (borda escura, mesma cor do defeito) encaminha pra fila de conserto pra investigar melhor a causa — imprima os dois lados, corte e cole-os costa a costa (ou plastifique junto) pra virar um cartão físico só. Pra defeitos que nunca são consertados na hora (ex: em curto, não parametriza), use "Só encaminhar pra conserto" abaixo — gera um único cartão já no visual de encaminhamento, sem precisar de causa raiz. Cada defeito recebe automaticamente uma cor própria, sempre a mesma.</div>
   </div>
 
   <div class="scan-box no-print" style="border-color:#000;">
@@ -836,6 +836,14 @@
       <button class="toggle-btn" id="cartoesUnidadeElet" type="button">Eletrônica</button>
     </div>
 
+    <div class="field" style="margin-bottom:14px;">
+      <label>Este defeito tem opção de consertar na hora?</label>
+      <div class="toggle-row">
+        <button class="toggle-btn active-yes" id="btnCartaoModoDuplo" type="button">Frente e verso (consertar agora + encaminhar)</button>
+        <button class="toggle-btn" id="btnCartaoModoSoVerso" type="button">Só encaminhar pra conserto (ex: em curto, não parametriza)</button>
+      </div>
+    </div>
+
     <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px;">
       <div class="field" style="flex:1; min-width:170px; margin:0;">
         <label>Tipo de defeito</label>
@@ -843,7 +851,7 @@
         <input type="text" id="cartaoNovoDefeitoTexto" placeholder="Digite o defeito" style="display:none; margin-top:6px;">
         <a href="#" id="linkCartaoDefeitoModo" style="font-size:11px; color:var(--text-faint); text-decoration:underline;">✎ digitar outro defeito</a>
       </div>
-      <div class="field" style="flex:1; min-width:170px; margin:0;">
+      <div class="field" id="cartaoNovoCausaWrap" style="flex:1; min-width:170px; margin:0;">
         <label>Causa raiz</label>
         <select id="cartaoNovoCausa"></select>
         <input type="text" id="cartaoNovoCausaTexto" placeholder="Digite a causa raiz" style="display:none; margin-top:6px;">
@@ -4294,27 +4302,50 @@ function resetModoCartaoCampos(){
   document.getElementById('linkCartaoCausaModo').textContent = '✎ digitar outra causa';
 }
 
-/* Renderiza o par frente/verso de um item do baralho: frente clara = consertar agora (com a
-   causa gravada), verso escuro = encaminhar pra conserto (defeito só, causa a investigar). O
-   aviso "ENCAMINHAR PARA CONSERTO" no verso é sempre vermelho, seja qual for a cor do defeito. */
-function renderCartaoPar(unidade, item, idx){
+/* Modo do cartão sendo cadastrado: 'duplo' (frente clara = consertar agora + verso escuro =
+   encaminhar) ou 'so_verso' (defeitos que nunca são consertados na hora — ex: em curto, não
+   parametriza — geram direto um único cartão no visual de "encaminhar pra conserto", sem causa
+   raiz, já que não há frente pra gravar). */
+let cartaoNovoModo = 'duplo';
+function atualizarModoCartaoNovo(){
+  document.getElementById('btnCartaoModoDuplo').className = cartaoNovoModo==='duplo' ? 'toggle-btn active-yes' : 'toggle-btn';
+  document.getElementById('btnCartaoModoSoVerso').className = cartaoNovoModo==='so_verso' ? 'toggle-btn active-yes' : 'toggle-btn';
+  document.getElementById('cartaoNovoCausaWrap').style.display = cartaoNovoModo==='duplo' ? '' : 'none';
+}
+document.getElementById('btnCartaoModoDuplo').addEventListener('click', ()=>{ cartaoNovoModo='duplo'; atualizarModoCartaoNovo(); });
+document.getElementById('btnCartaoModoSoVerso').addEventListener('click', ()=>{ cartaoNovoModo='so_verso'; atualizarModoCartaoNovo(); });
+
+/* Renderiza o(s) cartão(ões) de um item do baralho. Item "duplo" (padrão): par frente clara
+   (consertar agora, com a causa gravada) + verso escuro (encaminhar pra conserto, causa a
+   investigar). Item "so_verso" (defeito sem opção de consertar na hora): só o cartão escuro,
+   direto pro desfecho de conserto. O aviso "ENCAMINHAR PARA CONSERTO" é sempre vermelho. */
+function renderCartaoItem(unidade, item, idx){
   const cor = corDefeito(item.defeito);
-  const codigoFrente = montarCodigoCartao(unidade, 'AGORA', item.defeito, item.causa);
+  const ehDuplo = item.duplo !== false;
   const codigoVerso = montarCodigoCartao(unidade, 'CONSERTO', item.defeito, '');
-  return `<div class="cartao-par">
-    <div class="cartao-defeito" style="border-color:${cor.clara};">
+  const cardVerso = `<div class="cartao-defeito" style="border-color:${cor.escura};">
+      <div class="cartao-lado-tag">${ehDuplo ? 'VERSO' : ''}</div>
+      <div class="cartao-qr">${gerarQrSvg(codigoVerso)}</div>
+      <div class="cartao-defeito-nome">${escapeHtml(item.defeito)}</div>
+      <div class="cartao-encaminhar-aviso">ENCAMINHAR PARA CONSERTO</div>
+    </div>`;
+  if(!ehDuplo){
+    return `<div class="cartao-par">
+      ${cardVerso}
+      <button class="cartao-remover no-print" data-idx="${idx}" type="button">✕ Remover este cartão</button>
+    </div>`;
+  }
+  const codigoFrente = montarCodigoCartao(unidade, 'AGORA', item.defeito, item.causa);
+  const cardFrente = `<div class="cartao-defeito" style="border-color:${cor.clara};">
       <div class="cartao-lado-tag">FRENTE</div>
       <div class="cartao-qr">${gerarQrSvg(codigoFrente)}</div>
       <div class="cartao-defeito-nome">${escapeHtml(item.defeito)}</div>
       <div class="cartao-causa-nome">${escapeHtml(item.causa)}</div>
       <div class="cartao-desfecho-nome">Consertar agora</div>
-    </div>
-    <div class="cartao-defeito" style="border-color:${cor.escura};">
-      <div class="cartao-lado-tag">VERSO</div>
-      <div class="cartao-qr">${gerarQrSvg(codigoVerso)}</div>
-      <div class="cartao-defeito-nome">${escapeHtml(item.defeito)}</div>
-      <div class="cartao-encaminhar-aviso">ENCAMINHAR PARA CONSERTO</div>
-    </div>
+    </div>`;
+  return `<div class="cartao-par">
+    ${cardFrente}
+    ${cardVerso}
     <button class="cartao-remover no-print" data-idx="${idx}" type="button">✕ Remover este cartão (frente + verso)</button>
   </div>`;
 }
@@ -4324,11 +4355,13 @@ function refreshCartoesDefeito(){
   document.getElementById('cartoesUnidadeElet').className = cartoesUnidadeAtual==='Eletrônica' ? 'toggle-btn active-yes' : 'toggle-btn';
   populateCartaoNovoSelects();
   resetModoCartaoCampos();
+  cartaoNovoModo = 'duplo';
+  atualizarModoCartaoNovo();
   const todos = getCartoesDefeito();
   const lista = todos[cartoesUnidadeAtual] || [];
   const grid = document.getElementById('cartoesGrid');
   document.getElementById('cartoesEmptyState').style.display = lista.length ? 'none' : 'block';
-  grid.innerHTML = lista.map((item, idx)=>renderCartaoPar(cartoesUnidadeAtual, item, idx)).join('');
+  grid.innerHTML = lista.map((item, idx)=>renderCartaoItem(cartoesUnidadeAtual, item, idx)).join('');
   document.getElementById('cartaoManualQr').innerHTML = gerarQrSvg(CARTAO_MANUAL_CODIGO);
 }
 
@@ -4342,20 +4375,21 @@ document.getElementById('cartoesUnidadeElet').addEventListener('click', ()=>{
 });
 
 document.getElementById('btnAdicionarCartao').addEventListener('click', ()=>{
+  const ehDuplo = cartaoNovoModo==='duplo';
   const defeitoTextoVisivel = document.getElementById('cartaoNovoDefeitoTexto').style.display !== 'none';
   const causaTextoVisivel = document.getElementById('cartaoNovoCausaTexto').style.display !== 'none';
   /* O "|" é o separador do código do cartão — se o operador digitar um, troca por "/" pra não
      quebrar a leitura do QR depois. A caixa de texto já entrega maiúsculo (regra geral do
      app), então não precisa forçar aqui. */
   const defeito = (defeitoTextoVisivel ? document.getElementById('cartaoNovoDefeitoTexto').value : document.getElementById('cartaoNovoDefeito').value).trim().replace(/\|/g, '/');
-  const causa = (causaTextoVisivel ? document.getElementById('cartaoNovoCausaTexto').value : document.getElementById('cartaoNovoCausa').value).trim().replace(/\|/g, '/');
+  const causa = ehDuplo ? (causaTextoVisivel ? document.getElementById('cartaoNovoCausaTexto').value : document.getElementById('cartaoNovoCausa').value).trim().replace(/\|/g, '/') : '';
   if(!defeito){ showToast('Informe o tipo de defeito'); return; }
-  if(!causa){ showToast('Informe a causa raiz'); return; }
+  if(ehDuplo && !causa){ showToast('Informe a causa raiz (ou mude pra "Só encaminhar pra conserto")'); return; }
   const todos = getCartoesDefeito();
   if(!todos[cartoesUnidadeAtual]) todos[cartoesUnidadeAtual] = [];
   const jaExiste = todos[cartoesUnidadeAtual].some(i=>i.defeito===defeito && i.causa===causa);
   if(jaExiste){ showToast('Esse cartão já está no baralho desta unidade'); return; }
-  todos[cartoesUnidadeAtual].push({ defeito, causa });
+  todos[cartoesUnidadeAtual].push({ defeito, causa, duplo: ehDuplo });
   saveCartoesDefeito(todos);
   refreshCartoesDefeito();
   showToast('Cartão adicionado — role a página para ver e imprimir');
