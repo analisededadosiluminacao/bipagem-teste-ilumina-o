@@ -794,10 +794,14 @@
       <div class="field" style="flex:1; min-width:170px; margin:0;">
         <label>Tipo de defeito</label>
         <select id="cartaoNovoDefeito"></select>
+        <input type="text" id="cartaoNovoDefeitoTexto" placeholder="Digite o defeito" style="display:none; margin-top:6px;">
+        <a href="#" id="linkCartaoDefeitoModo" style="font-size:11px; color:var(--text-faint); text-decoration:underline;">✎ digitar outro defeito</a>
       </div>
       <div class="field" style="flex:1; min-width:170px; margin:0;">
         <label>Causa raiz</label>
         <select id="cartaoNovoCausa"></select>
+        <input type="text" id="cartaoNovoCausaTexto" placeholder="Digite a causa raiz" style="display:none; margin-top:6px;">
+        <a href="#" id="linkCartaoCausaModo" style="font-size:11px; color:var(--text-faint); text-decoration:underline;">✎ digitar outra causa</a>
       </div>
       <button class="btn-save" id="btnAdicionarCartao" style="margin:0; white-space:nowrap;">+ Adicionar ao baralho</button>
     </div>
@@ -4138,9 +4142,10 @@ function montarCodigoCartao(unidade, defeito, causa){
   return 'DEFCARD|'+CARTAO_UNIDADE_CODE[unidade]+'|'+defeito+'|'+causa;
 }
 
-/* Reconhece um código de cartão de defeito bipado e valida contra as listas atuais de
-   defeito/causa da unidade — um cartão antigo (de uma lista já alterada) simplesmente não
-   valida mais e cai no fluxo normal de "código inválido". */
+/* Reconhece um código de cartão de defeito bipado e confere se ele corresponde a um cartão
+   que realmente existe no baralho salvo daquela unidade — não só se defeito/causa "fazem
+   sentido" isoladamente. Isso permite defeito/causa digitados livremente (não só os da lista
+   padrão) e, ao mesmo tempo, invalida automaticamente um cartão removido do baralho. */
 function parseDefCard(raw){
   if(typeof raw !== 'string' || raw.indexOf('DEFCARD|') !== 0) return null;
   const partes = raw.split('|');
@@ -4149,10 +4154,9 @@ function parseDefCard(raw){
   if(!unidade) return null;
   const defeito = partes[2];
   const causa = partes[3];
-  const listaDefeitos = unidade==='Eletrônica' ? DEFEITOS_ELETRONICA : DEFEITOS_ILUMINACAO;
-  const listaCausas = unidade==='Eletrônica' ? CAUSAS_RAIZ_ELETRONICA : CAUSAS_RAIZ_ILUMINACAO;
-  if(listaDefeitos.indexOf(defeito) === -1) return null;
-  if(listaCausas.indexOf(causa) === -1 || causa === 'Outros / digitar manualmente') return null;
+  const baralho = getCartoesDefeito()[unidade] || [];
+  const existe = baralho.some(i=>i.defeito===defeito && i.causa===causa);
+  if(!existe) return null;
   return { unidade, defeito, causa };
 }
 
@@ -4170,10 +4174,42 @@ function populateCartaoNovoSelects(){
   document.getElementById('cartaoNovoCausa').innerHTML = causas.map(c=>`<option>${escapeHtml(c)}</option>`).join('');
 }
 
+/* Alterna cada campo (defeito / causa) entre "escolher da lista padrão" e "digitar livre" —
+   pra criar cartões de combinações que não estão nas listas prontas. */
+function alternarModoCartaoCampo(selectId, textoId, linkId){
+  const select = document.getElementById(selectId);
+  const texto = document.getElementById(textoId);
+  const link = document.getElementById(linkId);
+  const digitando = select.style.display !== 'none';
+  select.style.display = digitando ? 'none' : '';
+  texto.style.display = digitando ? 'block' : 'none';
+  link.textContent = digitando ? '☰ escolher da lista' : (selectId==='cartaoNovoDefeito' ? '✎ digitar outro defeito' : '✎ digitar outra causa');
+  if(digitando) texto.focus();
+}
+document.getElementById('linkCartaoDefeitoModo').addEventListener('click', (e)=>{
+  e.preventDefault();
+  alternarModoCartaoCampo('cartaoNovoDefeito', 'cartaoNovoDefeitoTexto', 'linkCartaoDefeitoModo');
+});
+document.getElementById('linkCartaoCausaModo').addEventListener('click', (e)=>{
+  e.preventDefault();
+  alternarModoCartaoCampo('cartaoNovoCausa', 'cartaoNovoCausaTexto', 'linkCartaoCausaModo');
+});
+function resetModoCartaoCampos(){
+  document.getElementById('cartaoNovoDefeito').style.display = '';
+  document.getElementById('cartaoNovoDefeitoTexto').style.display = 'none';
+  document.getElementById('cartaoNovoDefeitoTexto').value = '';
+  document.getElementById('linkCartaoDefeitoModo').textContent = '✎ digitar outro defeito';
+  document.getElementById('cartaoNovoCausa').style.display = '';
+  document.getElementById('cartaoNovoCausaTexto').style.display = 'none';
+  document.getElementById('cartaoNovoCausaTexto').value = '';
+  document.getElementById('linkCartaoCausaModo').textContent = '✎ digitar outra causa';
+}
+
 function refreshCartoesDefeito(){
   document.getElementById('cartoesUnidadeIlum').className = cartoesUnidadeAtual==='Iluminação' ? 'toggle-btn active-yes' : 'toggle-btn';
   document.getElementById('cartoesUnidadeElet').className = cartoesUnidadeAtual==='Eletrônica' ? 'toggle-btn active-yes' : 'toggle-btn';
   populateCartaoNovoSelects();
+  resetModoCartaoCampos();
   const todos = getCartoesDefeito();
   const lista = todos[cartoesUnidadeAtual] || [];
   const grid = document.getElementById('cartoesGrid');
@@ -4199,9 +4235,15 @@ document.getElementById('cartoesUnidadeElet').addEventListener('click', ()=>{
 });
 
 document.getElementById('btnAdicionarCartao').addEventListener('click', ()=>{
-  const defeito = document.getElementById('cartaoNovoDefeito').value;
-  const causa = document.getElementById('cartaoNovoCausa').value;
-  if(!defeito || !causa) return;
+  const defeitoTextoVisivel = document.getElementById('cartaoNovoDefeitoTexto').style.display !== 'none';
+  const causaTextoVisivel = document.getElementById('cartaoNovoCausaTexto').style.display !== 'none';
+  /* O "|" é o separador do código do cartão — se o operador digitar um, troca por "/" pra não
+     quebrar a leitura do QR depois. */
+  let defeito = (defeitoTextoVisivel ? document.getElementById('cartaoNovoDefeitoTexto').value : document.getElementById('cartaoNovoDefeito').value).trim().replace(/\|/g, '/');
+  let causa = (causaTextoVisivel ? document.getElementById('cartaoNovoCausaTexto').value : document.getElementById('cartaoNovoCausa').value).trim().replace(/\|/g, '/');
+  if(defeitoTextoVisivel) defeito = defeito.toUpperCase();
+  if(!defeito){ showToast('Informe o tipo de defeito'); return; }
+  if(!causa){ showToast('Informe a causa raiz'); return; }
   const todos = getCartoesDefeito();
   if(!todos[cartoesUnidadeAtual]) todos[cartoesUnidadeAtual] = [];
   const jaExiste = todos[cartoesUnidadeAtual].some(i=>i.defeito===defeito && i.causa===causa);
